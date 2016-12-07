@@ -32,6 +32,3 @@ reddit = praw.Reddit(user_agent=USER_AGENT, client_id=APP_ID, client_secret=APP_
 
 for submission in reddit.subreddit('funny').hot(limit=10):
     print(submission.title)
-
-
-
