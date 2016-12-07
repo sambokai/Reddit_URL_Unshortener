@@ -1,0 +1,21 @@
+# URL-Unshortener Configuration File
+# WARNING: This file contains passwords. Be sure to take appropriate precautions
+#          (e.g. Add to .gitignore or .hgignore and ensure only bot user has
+#          access)
+
+# Reddit Configuration
+# user_agent: User agent reported by praw (username is recommended unless you
+#             know what you are doing. See: https://github.com/reddit/reddit/wiki/API)
+# username: Reddit username to use
+# password: Reddit password to use
+# app_id: Your Reddit Client ID
+# app_secret: Your Reddit Client Secret
+# owner_username: Your main account's username
+
+[reddit]
+user_agent = reddit_username
+username = reddit_username
+password = reddit_password
+app_id = reddit_clientID
+app_secret = reddit_clientSecret
+owner_username = your_username
