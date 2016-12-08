@@ -12,10 +12,18 @@
 # app_secret: Your Reddit Client Secret
 # owner_username: Your main account's username
 
-[reddit]
+[reddit] # DO NOT PUBLISH YOUR REAL CREDENTIALS. USE AN EXAMPLE-.cfg LIKE THIS ONE WHEN PUBLISHING TO GITHUB OR SIMILAR.
 user_agent = reddit_username
 username = reddit_username
 password = reddit_password
 app_id = reddit_clientID
 app_secret = reddit_clientSecret
 owner_username = your_username
+
+# Bot Configuration
+# max_commentlength: Max. size of scanned comments. Any comment above this number is ignored.
+#                    User-Posts containing URLs usually average around 600 characters. Most Posts between 600 and 1500 are bots.
+#                    This number should not exceed 1500 because of performance reasons.
+
+[urlunshortener]
+max_commentlength = 1200
