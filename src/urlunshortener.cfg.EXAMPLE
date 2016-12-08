@@ -22,8 +22,10 @@ owner_username = your_username
 
 # Bot Configuration
 # max_commentlength: Max. size of scanned comments. Any comment above this number is ignored.
-#                    User-Posts containing URLs usually average around 600 characters. Most Posts between 600 and 1500 are bots.
+#                    User-Posts containing URLs usually average around 600 characters. Most Posts between 800 and 1500 are bots.
 #                    This number should not exceed 1500 because of performance reasons.
+# url_regex_pattern: (DONT CHANGE THIS IF YOU DON'T KNOW WHAT YOURE DOING) RegEx pattern that is used to match relevant urls.
 
 [urlunshortener]
-max_commentlength = 1200
+max_commentlength = 800
+url_regex_pattern = (?:https?:\/\/)?(?:www.)?(?:(?:[a-zA-Z0-9-]{1,63}\.[a-zA-Z0-9-]{2,63}))\/[a-zA-Z0-9-_\/]*

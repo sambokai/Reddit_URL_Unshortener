@@ -8,6 +8,8 @@ cfg_file = configparser.ConfigParser()
 cfg_file.read('url-unshortener.cfg')
 
 MAX_COMMENTLENGTH = int(cfg_file['urlunshortener']['max_commentlength'])
+URLMATCH_PATTERN_STRING = cfg_file['urlunshortener']['url_regex_pattern']
+regex_pattern = re.compile(URLMATCH_PATTERN_STRING)
 
 APP_ID = cfg_file['reddit']['app_id']
 APP_SECRET = cfg_file['reddit']['app_secret']
@@ -33,16 +35,12 @@ print(response.json(), "\n\n\n\n\n\n\n\n\n\n\n\n")
 reddit = praw.Reddit(user_agent=USER_AGENT, client_id=APP_ID, client_secret=APP_SECRET, username=REDDIT_ACCOUNT,
                      password=REDDIT_PASSWD)
 
-regex_pattern = re.compile(r'''(?i)\b((?:[a-z][\w-]+:(?:/{1,3}|[a-z0-9%])|www\d{0,3}[.]|[a-z0-9.\-]+[.]
-[a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))
-*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'\".,<>?«»“”‘’]))''')
+print(regex_pattern.search("testing www.bit.ly/qwodihqwoidh"))
 
 counter = 1
 allsubs = reddit.subreddit('all')
 for comment in allsubs.stream.comments():
     if len(comment.body) < MAX_COMMENTLENGTH and regex_pattern.search(comment.body):
-        print("TEST NUMBER ", counter, "\nComment Length: ", len(comment.body), "\n\n", comment.body, "\n\n\n\n\n\n\n\n"
-                                                                                                      "\n\n\n\n\n\n\n\n\n\n")
+        print("TEST NUMBER ", counter, "\nComment Length: ", len(comment.body), "\n\n", comment.body,
+              "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
         counter += 1
-
-# (http(s)?:\ / \ /.)?(www\.)?[-a - zA - Z0 - 9 @: %._\+~  # =]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)
