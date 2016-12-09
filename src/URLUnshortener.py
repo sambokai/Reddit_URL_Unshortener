@@ -1,14 +1,16 @@
 import re
-import requests.auth
 import praw
 import configparser
-from praw.models import MoreComments
+import time
+
+import sys
 
 cfg_file = configparser.ConfigParser()
 cfg_file.read('url-unshortener.cfg')
 
 MAX_COMMENTLENGTH = int(cfg_file['urlunshortener']['max_commentlength'])
-URLMATCH_PATTERN_STRING = cfg_file['urlunshortener']['url_regex_pattern']
+SCAN_SUBREDDIT = cfg_file.get('urlunshortener', 'scan_subreddit')
+URLMATCH_PATTERN_STRING = cfg_file['urlunshortener']['url_regex_pattern_ignorehttps']
 regex_pattern = re.compile(URLMATCH_PATTERN_STRING)
 
 APP_ID = cfg_file['reddit']['app_id']
@@ -17,30 +19,35 @@ USER_AGENT = cfg_file['reddit']['user_agent']
 REDDIT_ACCOUNT = cfg_file['reddit']['username']
 REDDIT_PASSWD = cfg_file['reddit']['password']
 
-# Request the token
-client_auth = requests.auth.HTTPBasicAuth(APP_ID, APP_SECRET)
-post_data = {"grant_type": "password", "username": REDDIT_ACCOUNT, "password": REDDIT_PASSWD}
-headers = {"User-Agent": USER_AGENT}
-response = requests.post("https://www.reddit.com/api/v1/access_token",
-                         auth=client_auth, data=post_data, headers=headers)
-access_token = response.json()['access_token']
-
-# Use the token
-headers = {"Authorization": "bearer " + access_token, "User-Agent": USER_AGENT}
-response = requests.get("https://oauth.reddit.com/api/v1/me", headers=headers)
-
-print(response.json(), "\n\n\n\n\n\n\n\n\n\n\n\n")
+matchcounter = 0
+totalcounter = 1
 
 # Start PRAW Reddit Session
+print("Connecting...")
 reddit = praw.Reddit(user_agent=USER_AGENT, client_id=APP_ID, client_secret=APP_SECRET, username=REDDIT_ACCOUNT,
                      password=REDDIT_PASSWD)
+print("Connection successful. Reddit session started.\n")
+allsubs = reddit.subreddit(SCAN_SUBREDDIT)
 
-print(regex_pattern.search("testing www.bit.ly/qwodihqwoidh"))
+print("\nURL-Match RegEx used: \"", URLMATCH_PATTERN_STRING, "\"")
+print("Subreddits to scan: ", SCAN_SUBREDDIT)
 
-counter = 1
-allsubs = reddit.subreddit('all')
-for comment in allsubs.stream.comments():
-    if len(comment.body) < MAX_COMMENTLENGTH and regex_pattern.search(comment.body):
-        print("TEST NUMBER ", counter, "\nComment Length: ", len(comment.body), "\n\n", comment.body,
-              "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n")
-        counter += 1
+
+def main():
+    global matchcounter, totalcounter
+    for comment in allsubs.stream.comments():
+        if len(comment.body) < MAX_COMMENTLENGTH:
+            if regex_pattern.search(comment.body):
+                matchcounter += 1
+                print("\n\nMatch #", matchcounter, "   Total #", totalcounter, "    Parent: ", comment.parent_id,
+                      "   Length:  ", len(comment.body), "   URL: ", regex_pattern.search(comment.body))
+
+        totalcounter += 1
+
+
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("\nInterrupted\n")
+        sys.exit(0)

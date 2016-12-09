@@ -22,10 +22,12 @@ owner_username = your_username
 
 # Bot Configuration
 # max_commentlength: Max. size of scanned comments. Any comment above this number is ignored.
-#                    User-Posts containing URLs usually average around 600 characters. Most Posts between 800 and 1500 are bots.
+#                    User-Posts containing URLs usually average around 600 characters. Most Posts between 600 and 1500 are bots.
 #                    This number should not exceed 1500 because of performance reasons.
-# url_regex_pattern: (DONT CHANGE THIS IF YOU DON'T KNOW WHAT YOURE DOING) RegEx pattern that is used to match relevant urls.
+# url_regex_pattern_ignorehttps: (DONT CHANGE THIS IF YOU DON'T KNOW WHAT YOURE DOING) RegEx pattern that is used to match relevant urls.
+# scan_subreddit: This is the sub or list of subs to scan for new posts. To scan all posts use "all". For a single sub, use "sub1". For multiple subreddits, use "sub1+sub2+sub3+..."
 
 [urlunshortener]
 max_commentlength = 800
-url_regex_pattern = (?:https?:\/\/)?(?:www.)?(?:(?:[a-zA-Z0-9-]{1,63}\.[a-zA-Z0-9-]{2,63}))\/[a-zA-Z0-9-_\/]*
+scan_subreddit = all
+url_regex_pattern_ignorehttps = (?:[a-z0-9-]{1,8}\.[a-z]{2,4})\/[a-zA-Z0-9-_\/?\.=]{2,15}
