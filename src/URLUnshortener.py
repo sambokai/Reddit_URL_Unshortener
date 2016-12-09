@@ -1,7 +1,7 @@
 import re
 import praw
 import configparser
-import time
+import requests
 
 import sys
 
@@ -43,6 +43,19 @@ def main():
                       "   Length:  ", len(comment.body), "   URL: ", regex_pattern.search(comment.body))
 
         totalcounter += 1
+
+
+def reveal_long_url(url):
+    session = requests.Session()  # so connections are recycled
+    try:
+        resp = session.head(url, allow_redirects=True)
+        if url == resp.url:
+            raise Exception("URL is not shortened.")
+        print(resp.url)
+    except requests.exceptions.MissingSchema as e:
+        print(str(e))
+    except Exception as e:
+        print("ERROR:", str(e))
 
 
 if __name__ == '__main__':
