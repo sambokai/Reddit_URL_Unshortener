@@ -2,16 +2,14 @@ import re
 import praw
 import configparser
 import requests
-
+import queue
 import sys
+import threading
+
+import time
 
 cfg_file = configparser.ConfigParser()
 cfg_file.read('url-unshortener.cfg')
-
-MAX_COMMENTLENGTH = int(cfg_file['urlunshortener']['max_commentlength'])
-SCAN_SUBREDDIT = cfg_file.get('urlunshortener', 'scan_subreddit')
-URLMATCH_PATTERN_STRING = cfg_file['urlunshortener']['url_regex_pattern_ignorehttps']
-regex_pattern = re.compile(URLMATCH_PATTERN_STRING)
 
 APP_ID = cfg_file['reddit']['app_id']
 APP_SECRET = cfg_file['reddit']['app_secret']
@@ -19,30 +17,65 @@ USER_AGENT = cfg_file['reddit']['user_agent']
 REDDIT_ACCOUNT = cfg_file['reddit']['username']
 REDDIT_PASSWD = cfg_file['reddit']['password']
 
-matchcounter = 0
-totalcounter = 1
+comments_to_process = queue.Queue()
 
 # Start PRAW Reddit Session
 print("Connecting...")
 reddit = praw.Reddit(user_agent=USER_AGENT, client_id=APP_ID, client_secret=APP_SECRET, username=REDDIT_ACCOUNT,
                      password=REDDIT_PASSWD)
 print("Connection successful. Reddit session started.\n")
-allsubs = reddit.subreddit(SCAN_SUBREDDIT)
 
-print("\nURL-Match RegEx used: \"", URLMATCH_PATTERN_STRING, "\"")
-print("Subreddits to scan: ", SCAN_SUBREDDIT)
+
+# First pass
+class CommentScanner:
+    def __init__(self):
+        self.max_commentlength = int(cfg_file['urlunshortener']['max_commentlength'])
+        self.SCAN_SUBREDDIT = cfg_file.get('urlunshortener', 'scan_subreddit')
+        self.subs_to_scan = reddit.subreddit(self.SCAN_SUBREDDIT)
+        self.URLMATCH_PATTERN_STRING = cfg_file['urlunshortener']['url_regex_pattern_ignorehttps']
+        self.regex_pattern = re.compile(self.URLMATCH_PATTERN_STRING)
+        print("CommentScanner constructed.")
+
+    def run(self):
+        print("\nURL-Match RegEx used: \"", self.URLMATCH_PATTERN_STRING, "\"")
+        print("Subreddits to scan: ", self.SCAN_SUBREDDIT)
+        matchcounter = 0
+        totalcounter = 0
+        for comment in self.subs_to_scan.stream.comments():
+            body = comment.body
+            if len(body) < self.max_commentlength:
+                match = self.regex_pattern.search(body)
+                if match:
+                    # print("\n\nMatch #", matchcounter, "   Total #", totalcounter,
+                    #       "   URL: ", match.group(0))
+                    comments_to_process.put(comment)
+                    matchcounter += 1
+
+            totalcounter += 1
+
+
+# Second pass
+class CommentFilter:
+    def __init__(self):
+        print("CommentProcessor constructed.")
+
+    def run(self):
+        while True:
+            if comments_to_process.not_empty:
+                comments_to_process.get()
+                time.sleep(1)
+                print("\nQueue size: ", comments_to_process.qsize())
 
 
 def main():
-    global matchcounter, totalcounter
-    for comment in allsubs.stream.comments():
-        if len(comment.body) < MAX_COMMENTLENGTH:
-            if regex_pattern.search(comment.body):
-                matchcounter += 1
-                print("\n\nMatch #", matchcounter, "   Total #", totalcounter, "    Parent: ", comment.parent_id,
-                      "   Length:  ", len(comment.body), "   URL: ", regex_pattern.search(comment.body))
+    comment_filter = CommentFilter()
+    comment_scanner = CommentScanner()
 
-        totalcounter += 1
+    process_thread = threading.Thread(target=comment_filter.run, args=())
+    scan_thread = threading.Thread(target=comment_scanner.run, args=())
+
+    process_thread.start()
+    scan_thread.start()
 
 
 def reveal_long_url(url):
