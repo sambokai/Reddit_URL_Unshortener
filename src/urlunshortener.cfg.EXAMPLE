@@ -30,4 +30,4 @@ owner_username = your_username
 [urlunshortener]
 max_commentlength = 800
 scan_subreddit = all
-url_regex_pattern_ignorehttps = (?:[a-z0-9-]{1,8}\.[a-z]{2,4})\/[a-zA-Z0-9-_\/?\.=]{2,15}
+url_regex_pattern_ignorehttps = \.[a-zA-Z]{2,4}\/[a-zA-Z0-9-_\/?\.=]+
