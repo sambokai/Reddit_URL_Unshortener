@@ -32,19 +32,19 @@ class CommentScanner:
         self.max_commentlength = int(cfg_file['urlunshortener']['max_commentlength'])
         self.SCAN_SUBREDDIT = cfg_file.get('urlunshortener', 'scan_subreddit')
         self.subs_to_scan = reddit.subreddit(self.SCAN_SUBREDDIT)
-        self.URLMATCH_PATTERN_STRING = cfg_file['urlunshortener']['url_regex_pattern_ignorehttps']
-        self.regex_pattern = re.compile(self.URLMATCH_PATTERN_STRING)
+        self.firstpass_pattern_string = cfg_file['urlunshortener']['firstpass_url_regex_pattern']
+        self.firstpass_regex = re.compile(self.firstpass_pattern_string)
         print("CommentScanner constructed.")
 
     def run(self):
-        print("\nURL-Match RegEx used: \"", self.URLMATCH_PATTERN_STRING, "\"")
+        print("\nURL-Match RegEx used: \"", self.firstpass_pattern_string, "\"")
         print("Subreddits to scan: ", self.SCAN_SUBREDDIT)
         matchcounter = 0
         totalcounter = 0
         for comment in self.subs_to_scan.stream.comments():
             body = comment.body
             if len(body) < self.max_commentlength:
-                match = self.regex_pattern.search(body)
+                match = self.firstpass_regex.search(body)
                 if match:
                     # print("\n\nMatch #", matchcounter, "   Total #", totalcounter,
                     #       "   URL: ", match.group(0))
@@ -57,14 +57,16 @@ class CommentScanner:
 # Second pass
 class CommentFilter:
     def __init__(self):
+        self.secondpass_pattern_string = cfg_file['urlunshortener']['secondpass_url_regex_pattern']
+        self.secondpass_regex = re.compile(self.secondpass_pattern_string)
         print("CommentProcessor constructed.")
 
     def run(self):
         while True:
             if comments_to_process.not_empty:
-                comments_to_process.get()
-                time.sleep(1)
-                print("\nQueue size: ", comments_to_process.qsize())
+                comment = comments_to_process.get()
+                print("\nQueue size: ", comments_to_process.qsize(), " URL: ",
+                      self.secondpass_regex.search(comment.body).group(0))
 
 
 def main():
