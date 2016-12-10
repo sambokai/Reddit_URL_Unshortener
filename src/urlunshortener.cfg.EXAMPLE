@@ -12,7 +12,7 @@
 # app_secret: Your Reddit Client Secret
 # owner_username: Your main account's username
 
-[reddit] # DO NOT PUBLISH YOUR REAL CREDENTIALS. USE AN EXAMPLE-.cfg LIKE THIS ONE WHEN PUBLISHING TO GITHUB OR SIMILAR.
+[reddit] # CAUTION: DO NOT PUBLISH your real credentials. Use an example .cfg like this one when publishing to github or similar!
 user_agent = reddit_username
 username = reddit_username
 password = reddit_password
@@ -24,10 +24,12 @@ owner_username = your_username
 # max_commentlength: Max. size of scanned comments. Any comment above this number is ignored.
 #                    User-Posts containing URLs usually average around 600 characters. Most Posts between 600 and 1500 are bots.
 #                    This number should not exceed 1500 because of performance reasons.
-# url_regex_pattern_ignorehttps: (DONT CHANGE THIS IF YOU DON'T KNOW WHAT YOURE DOING) RegEx pattern that is used to match relevant urls.
 # scan_subreddit: This is the sub or list of subs to scan for new posts. To scan all posts use "all". For a single sub, use "sub1". For multiple subreddits, use "sub1+sub2+sub3+..."
+# [EXPERT] firstpass_url_regex_pattern: RegEx pattern that is used in the first-pass-thread.
+# [EXPERT] secondpass_url_regex_pattern : RegEx pattern that is used in the second-pass-thread
 
 [urlunshortener]
-max_commentlength = 800
+max_commentlength = 1500
 scan_subreddit = all
-url_regex_pattern_ignorehttps = \.[a-zA-Z]{2,4}\/[a-zA-Z0-9-_\/?\.=]+
+firstpass_url_regex_pattern = \.[a-zA-Z]{2,4}\/[a-zA-Z0-9-_\/?\.=]+
+secondpass_url_regex_pattern = (?:(?:https?:\/\/)|(?:www\.)|\b)[a-zA-Z0-9-]{1,11}\.[a-zA-Z]{2,4}\/[a-zA-Z0-9-_\/?\.=]{1,15}(?:\s|$)
