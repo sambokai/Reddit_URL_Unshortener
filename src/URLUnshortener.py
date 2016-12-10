@@ -5,7 +5,6 @@ import requests
 import queue
 import sys
 import threading
-
 import time
 
 cfg_file = configparser.ConfigParser()
@@ -18,7 +17,6 @@ REDDIT_ACCOUNT = cfg_file['reddit']['username']
 REDDIT_PASSWD = cfg_file['reddit']['password']
 
 comments_to_process = queue.Queue()
-
 # Start PRAW Reddit Session
 print("Connecting...")
 reddit = praw.Reddit(user_agent=USER_AGENT, client_id=APP_ID, client_secret=APP_SECRET, username=REDDIT_ACCOUNT,
@@ -27,6 +25,7 @@ print("Connection successful. Reddit session started.\n")
 
 
 # First pass
+
 class CommentScanner:
     def __init__(self):
         self.max_commentlength = int(cfg_file['urlunshortener']['max_commentlength'])
@@ -34,13 +33,14 @@ class CommentScanner:
         self.subs_to_scan = reddit.subreddit(self.SCAN_SUBREDDIT)
         self.firstpass_pattern_string = cfg_file['urlunshortener']['firstpass_url_regex_pattern']
         self.firstpass_regex = re.compile(self.firstpass_pattern_string)
-        print("CommentScanner constructed.")
+        print("\nCommentScanner (Pass 1) constructed.")
+        print("First-Pass RegEx: \"", self.firstpass_pattern_string, "\"")
+        print("Subreddits to scan: ", self.SCAN_SUBREDDIT)
 
     def run(self):
-        print("\nURL-Match RegEx used: \"", self.firstpass_pattern_string, "\"")
-        print("Subreddits to scan: ", self.SCAN_SUBREDDIT)
         matchcounter = 0
         totalcounter = 0
+        # TODO: Consider switching to pushshift.io's v2 API.  https://apiv2.pushshift.io/reddit/comment/search
         for comment in self.subs_to_scan.stream.comments():
             body = comment.body
             if len(body) < self.max_commentlength:
@@ -59,14 +59,33 @@ class CommentFilter:
     def __init__(self):
         self.secondpass_pattern_string = cfg_file['urlunshortener']['secondpass_url_regex_pattern']
         self.secondpass_regex = re.compile(self.secondpass_pattern_string)
-        print("CommentProcessor constructed.")
+        print("\nCommentFilter (Pass 2) constructed.")
+
+        print("Second-Pass RegEx: \"", self.secondpass_pattern_string, "\"")
 
     def run(self):
         while True:
             if comments_to_process.not_empty:
                 comment = comments_to_process.get()
-                print("\nQueue size: ", comments_to_process.qsize(), " URL: ",
-                      self.secondpass_regex.search(comment.body).group(0))
+                print(comments_to_process.qsize())
+                match = self.secondpass_regex.search(comment.body)
+                if match:
+                    url = completeurl(match.group(0))
+                    print("\nQueue size: ", comments_to_process.qsize(), " URL: ",
+                          url)
+
+
+# Third pass
+class CommentProcessor:
+    def __init__(self):
+        print("CommentProcessor (Pass 3) constructed")
+
+
+def completeurl(url):
+    if (not url.startswith('http://')) and (not url.startswith('https://')):
+        return 'http://' + url
+    else:
+        return url
 
 
 def main():
@@ -86,7 +105,7 @@ def reveal_long_url(url):
         resp = session.head(url, allow_redirects=True)
         if url == resp.url:
             raise Exception("URL is not shortened.")
-        print(resp.url)
+        return 'SUCCESS: ' + resp.url
     except requests.exceptions.MissingSchema as e:
         print(str(e))
     except Exception as e:
