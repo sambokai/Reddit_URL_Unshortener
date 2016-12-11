@@ -1,11 +1,10 @@
-import re
-import praw
-import configparser
-import requests
-import queue
 import sys
 import threading
-import time
+import configparser
+import queue
+import re
+import praw
+import requests
 
 cfg_file = configparser.ConfigParser()
 cfg_file.read('url-unshortener.cfg')
@@ -53,6 +52,32 @@ class CommentScanner:
 
             totalcounter += 1
 
+    def run_pushshift(self):
+        lastpage = None
+
+        matchcounter = 0
+        totalcounter = 0
+        while True:
+            request = requests.get('https://apiv2.pushshift.io/reddit/comment/search')
+            json = request.json()
+            comments = json["data"]
+            meta = json["metadata"]
+
+            if lastpage != meta['next_page']:
+                for rawcomment in comments:
+                    body = rawcomment['body']
+                    if len(body) < self.max_commentlength:
+                        match = self.firstpass_regex.search(body)
+                        if match:
+                            # print("\n\nMatch #", matchcounter, "   Total #", totalcounter,
+                            #       "   URL: ", match.group(0))
+                            comments_to_process.put(rawcomment)
+                            matchcounter += 1
+                    totalcounter += 1
+
+                lastpage = meta['next_page']
+                # print(lastpage)
+
 
 # Second pass
 class CommentFilter:
@@ -69,6 +94,16 @@ class CommentFilter:
                 comment = comments_to_process.get()
                 print(comments_to_process.qsize())
                 match = self.secondpass_regex.search(comment.body)
+                if match:
+                    url = completeurl(match.group(0))
+                    print("\nQueue size: ", comments_to_process.qsize(), " URL: ",
+                          url)
+
+    def run_pushshift(self):
+        while True:
+            if comments_to_process.not_empty:
+                comment = comments_to_process.get()
+                match = self.secondpass_regex.search(comment['body'])
                 if match:
                     url = completeurl(match.group(0))
                     print("\nQueue size: ", comments_to_process.qsize(), " URL: ",
@@ -92,8 +127,8 @@ def main():
     comment_filter = CommentFilter()
     comment_scanner = CommentScanner()
 
-    process_thread = threading.Thread(target=comment_filter.run, args=())
-    scan_thread = threading.Thread(target=comment_scanner.run, args=())
+    process_thread = threading.Thread(target=comment_filter.run_pushshift, args=())
+    scan_thread = threading.Thread(target=comment_scanner.run_pushshift, args=())
 
     process_thread.start()
     scan_thread.start()
