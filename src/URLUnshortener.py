@@ -5,6 +5,7 @@ import queue
 import re
 import praw
 import requests
+import time
 
 cfg_file = configparser.ConfigParser()
 cfg_file.read('url-unshortener.cfg')
@@ -77,6 +78,8 @@ class CommentScanner:
 
                 lastpage = meta['next_page']
                 # print(lastpage)
+
+            time.sleep(4.5)
 
 
 # Second pass
