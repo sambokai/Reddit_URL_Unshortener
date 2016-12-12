@@ -50,32 +50,49 @@ class CommentScanner:
                     comments_to_process.put(comment)
 
     def run_pushshift(self):
-        lastpage = None
+        lastpage_timeout = 5  # timeout before restarting fetch, after having reached the most recent comment
+        lastpage_url = None  # used to check if site has changed
+        # fetch the latest 50 comments
+        request = requests.get('https://apiv2.pushshift.io/reddit/comment/search')
+        json = request.json()
+        comments = json["data"]
+
+        # use the latest comment's id (#50 out of 50) to save the next url. pushshifts after_id paramater allows us to
+        # continue after the specified id. that way no comments are skipped
+        initial_page_url = "http://apiv2.pushshift.io/reddit/comment/search/?sort=asc&limit=50&after_id=" + \
+                           str(comments[0]['id'])
+        next_page_url = initial_page_url
+        # fixme: dont skip first 50 comments; so instead of waiting, use the time to process the first 50 comments
+        # wait before next api request, if we don't wait there will be no "metadata" element.
+        time.sleep(lastpage_timeout)
+        # comment fetch loop
         while True:
-            request = requests.get('https://apiv2.pushshift.io/reddit/comment/search')
+            # request the comment-batch that comes after the initial batch
+            request = requests.get(next_page_url)
             json = request.json()
             comments = json["data"]
             meta = json["metadata"]
-
-            if lastpage != meta['next_page']:
+            # use the next_page url to determine wether there is new data
+            # if "next_page" key doesnt exist in 'metadata", it means that we are on the most current site
+            if 'next_page' in str(meta) and lastpage_url != (meta['next_page']):
+                # process the current batch of comments
                 for rawcomment in comments:
                     body = rawcomment['body']
                     if len(body) < self.max_commentlength:
                         match = self.firstpass_regex.search(body)
                         if match:
-                            # print("\n\nMatch #", matchcounter, "   Total #", totalcounter,
-                            #       "   URL: ", match.group(0))
+                            # put relevant comments (containing urls) in queue for other thread to further process
                             comments_to_process.put(rawcomment)
-
-                lastpage = meta['next_page']
-
-            time.sleep(4)  # fixme: instead of every n seconds, refresh dynamically. (see comment below)
-            # pushshift will implement after_id (reddit.com/r/pushshift/comments/5gawot)
-            '''The closest thing you could do right now is to use the after parameter which works on the epoch time.
-            You would want to look at the highest epoch time you got and subtract one and then make another call like
-            this: https://apiv2.pushshift.io/reddit/comment/search/?after=1481537047&sort=asc (where the after value
-            is whatever the second highest epoch time was that you received). You will get duplicate comments between
-            calls like this, though -- but you are assured to get every comment. '''
+                # save on which page we are to check when new page arrives using the "next_page" link
+                lastpage_url = meta['next_page']
+                # use the "next_page" link to fetch the next batch of comments
+                next_page_url = lastpage_url
+                # wait before requesting the next batch
+                time.sleep(1)
+            else:
+                print("Reached latest page. Wait ", lastpage_timeout, " seconds.")
+                time.sleep(lastpage_timeout)
+            print(lastpage_url)
 
 
 # Second pass
