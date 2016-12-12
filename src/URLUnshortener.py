@@ -104,11 +104,11 @@ class CommentScanner:
                 # use the "next_page" link to fetch the next batch of comments
                 next_page_url = lastpage_url
                 # wait before requesting the next batch
-                time.sleep(2)
+                time.sleep(1)
             else:
                 print("\nReached latest page. Wait ", lastpage_timeout, " seconds.")
                 time.sleep(lastpage_timeout)
-            print(lastpage_url)
+            print(time.strftime('%X %x %Z'), lastpage_url)
 
 
 # Second pass
@@ -138,6 +138,7 @@ class CommentFilter:
         while True:
             if comments_to_filter.not_empty:
                 comment = comments_to_filter.get()
+                print(comment)
                 match = self.secondpass_regex.search(comment['body'])
                 if match:
                     url = completeurl(match.group(0))
@@ -155,7 +156,7 @@ class CommentRevealer:
         while True:
             if comments_to_reveal.not_empty:
                 comment = comments_to_reveal.get()
-                print(comment)
+                print("shorturl: ", comment)
 
 
 def read_config():
