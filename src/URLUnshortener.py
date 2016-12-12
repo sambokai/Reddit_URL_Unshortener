@@ -10,21 +10,32 @@ import requests
 
 # TODO: add "About" section in README.md (learning python, first python project, cs student, etc..)
 
-cfg_file = configparser.ConfigParser()
-cfg_file.read('url-unshortener.cfg')
+cfg_file = None
+reddit = None
+shorturl_services = None
 
-APP_ID = cfg_file['reddit']['app_id']
-APP_SECRET = cfg_file['reddit']['app_secret']
-USER_AGENT = cfg_file['reddit']['user_agent']
-REDDIT_ACCOUNT = cfg_file['reddit']['username']
-REDDIT_PASSWD = cfg_file['reddit']['password']
 
-comments_to_process = queue.Queue()
-# Start PRAW Reddit Session
-print("Connecting...")
-reddit = praw.Reddit(user_agent=USER_AGENT, client_id=APP_ID, client_secret=APP_SECRET, username=REDDIT_ACCOUNT,
-                     password=REDDIT_PASSWD)
-print("Connection successful. Reddit session started.\n")
+# Queue of comments, populated by CommentScanner, to be filtered by CommentFilter
+comments_to_filter = queue.Queue()
+# Queue of comments, populated by CommentFilter, to be revealed and answered to by CommentRevealer
+comments_to_reveal = queue.Queue()
+
+
+def main():
+    read_config()
+    connect_praw()
+
+    comment_filter = CommentFilter()
+    comment_scanner = CommentScanner()
+    comment_revealer = CommentRevealer()
+
+    filter_thread = threading.Thread(target=comment_filter.run_pushshift, args=())
+    scan_thread = threading.Thread(target=comment_scanner.run_pushshift, args=())
+    reveal_thread = threading.Thread(target=comment_revealer.run, args=())
+
+    filter_thread.start()
+    scan_thread.start()
+    reveal_thread.start()
 
 
 # First pass
@@ -39,6 +50,8 @@ class CommentScanner:
         print("First-Pass RegEx: \"", self.firstpass_pattern_string, "\"")
         print("Subreddits to scan: ", self.SCAN_SUBREDDIT)
 
+    # in case pushshift stops working continue work on own implementation here
+    '''
     def run(self):
         for comment in self.subs_to_scan.stream.comments():
             body = comment.body
@@ -47,10 +60,12 @@ class CommentScanner:
                 if match:
                     # print("\n\nMatch #", matchcounter, "   Total #", totalcounter,
                     #       "   URL: ", match.group(0))
-                    comments_to_process.put(comment)
+                    comments_to_filter.put(comment)
+    '''
 
     def run_pushshift(self):
-        lastpage_timeout = 5  # timeout before restarting fetch, after having reached the most recent comment
+        initial_timeout = 10  # initial timeout before fetching the first batch
+        lastpage_timeout = 20  # timeout before restarting fetch, after having reached the most recent comment
         lastpage_url = None  # used to check if site has changed
         # fetch the latest 50 comments
         request = requests.get('https://apiv2.pushshift.io/reddit/comment/search')
@@ -64,7 +79,8 @@ class CommentScanner:
         next_page_url = initial_page_url
         # fixme: dont skip first 50 comments; so instead of waiting, use the time to process the first 50 comments
         # wait before next api request, if we don't wait there will be no "metadata" element.
-        time.sleep(lastpage_timeout)
+        time.sleep(initial_timeout)
+        print("\nStart fetching comments...")
         # comment fetch loop
         while True:
             # request the comment-batch that comes after the initial batch
@@ -82,15 +98,15 @@ class CommentScanner:
                         match = self.firstpass_regex.search(body)
                         if match:
                             # put relevant comments (containing urls) in queue for other thread to further process
-                            comments_to_process.put(rawcomment)
+                            comments_to_filter.put(rawcomment)
                 # save on which page we are to check when new page arrives using the "next_page" link
                 lastpage_url = meta['next_page']
                 # use the "next_page" link to fetch the next batch of comments
                 next_page_url = lastpage_url
                 # wait before requesting the next batch
-                time.sleep(1)
+                time.sleep(2)
             else:
-                print("Reached latest page. Wait ", lastpage_timeout, " seconds.")
+                print("\nReached latest page. Wait ", lastpage_timeout, " seconds.")
                 time.sleep(lastpage_timeout)
             print(lastpage_url)
 
@@ -104,32 +120,75 @@ class CommentFilter:
 
         print("Second-Pass RegEx: \"", self.secondpass_pattern_string, "\"")
 
+    # in case pushshift stops working continue work on own implementation here
+    '''
     def run(self):
         while True:
-            if comments_to_process.not_empty:
-                comment = comments_to_process.get()
-                print(comments_to_process.qsize())
+            if comments_to_filter.not_empty:
+                comment = comments_to_filter.get()
+                print(comments_to_filter.qsize())
                 match = self.secondpass_regex.search(comment.body)
                 if match:
                     url = completeurl(match.group(0))
-                    print("\nQueue size: ", comments_to_process.qsize(), " URL: ",
+                    print("\nQueue size: ", comments_to_filter.qsize(), " URL: ",
                           url)
+    '''
 
     def run_pushshift(self):
         while True:
-            if comments_to_process.not_empty:
-                comment = comments_to_process.get()
+            if comments_to_filter.not_empty:
+                comment = comments_to_filter.get()
                 match = self.secondpass_regex.search(comment['body'])
                 if match:
                     url = completeurl(match.group(0))
-                    print("\nQueue size: ", comments_to_process.qsize(), " URL: ",
-                          url)
+                    if any(word in url for word in shorturl_services):
+                        comments_to_reveal.put(comment)
 
 
 # Third pass
-class CommentProcessor:
+class CommentRevealer:
     def __init__(self):
-        print("CommentProcessor (Pass 3) constructed")
+        print("\nCommentRevealer (Pass 3) constructed.")
+
+    @staticmethod
+    def run():  # TODO: only run this thread when comment is found & put into comments_to_reveal. dont run all the time
+        while True:
+            if comments_to_reveal.not_empty:
+                comment = comments_to_reveal.get()
+                print(comment)
+
+
+def read_config():
+    global cfg_file, shorturl_services
+    cfg_file = configparser.ConfigParser()
+    cfg_file.read('url-unshortener.cfg')
+
+    shorturl_list_path = cfg_file.get('urlunshortener', 'shorturlserviceslist_path')
+
+    # Read in list of shorturl-services as list-object.
+    try:
+        with open(shorturl_list_path) as f:
+            shorturl_services = f.read().splitlines()
+    except FileNotFoundError as e:
+        print(e)
+        print("Please check services-list file or specified path in configuration file (.cfg) and restart "
+              "URLUnshortener.")
+        sys.exit(1)
+
+
+def connect_praw():
+    global cfg_file, reddit
+    app_id = cfg_file['reddit']['app_id']
+    app_secret = cfg_file['reddit']['app_secret']
+    user_agent = cfg_file['reddit']['user_agent']
+    reddit_account = cfg_file['reddit']['username']
+    reddit_passwd = cfg_file['reddit']['password']
+
+    # Start PRAW Reddit Session
+    print("Connecting...")
+    reddit = praw.Reddit(user_agent=user_agent, client_id=app_id, client_secret=app_secret, username=reddit_account,
+                         password=reddit_passwd)
+    print("Connection successful. Reddit session started.\n")
 
 
 def completeurl(url):
@@ -137,17 +196,6 @@ def completeurl(url):
         return 'http://' + url
     else:
         return url
-
-
-def main():
-    comment_filter = CommentFilter()
-    comment_scanner = CommentScanner()
-
-    filter_thread = threading.Thread(target=comment_filter.run_pushshift, args=())
-    scan_thread = threading.Thread(target=comment_scanner.run_pushshift, args=())
-
-    filter_thread.start()
-    scan_thread.start()
 
 
 def reveal_long_url(url):
