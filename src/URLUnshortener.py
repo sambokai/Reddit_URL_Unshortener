@@ -1,11 +1,14 @@
-import sys
-import threading
 import configparser
 import queue
 import re
+import sys
+import threading
+import time
+
 import praw
 import requests
-import time
+
+# TODO: add "About" section in README.md (learning python, first python project, cs student, etc..)
 
 cfg_file = configparser.ConfigParser()
 cfg_file.read('url-unshortener.cfg')
@@ -25,7 +28,6 @@ print("Connection successful. Reddit session started.\n")
 
 
 # First pass
-
 class CommentScanner:
     def __init__(self):
         self.max_commentlength = int(cfg_file['urlunshortener']['max_commentlength'])
@@ -38,9 +40,6 @@ class CommentScanner:
         print("Subreddits to scan: ", self.SCAN_SUBREDDIT)
 
     def run(self):
-        matchcounter = 0
-        totalcounter = 0
-        # TODO: Consider switching to pushshift.io's v2 API.  https://apiv2.pushshift.io/reddit/comment/search
         for comment in self.subs_to_scan.stream.comments():
             body = comment.body
             if len(body) < self.max_commentlength:
@@ -49,15 +48,9 @@ class CommentScanner:
                     # print("\n\nMatch #", matchcounter, "   Total #", totalcounter,
                     #       "   URL: ", match.group(0))
                     comments_to_process.put(comment)
-                    matchcounter += 1
-
-            totalcounter += 1
 
     def run_pushshift(self):
         lastpage = None
-
-        matchcounter = 0
-        totalcounter = 0
         while True:
             request = requests.get('https://apiv2.pushshift.io/reddit/comment/search')
             json = request.json()
@@ -73,13 +66,16 @@ class CommentScanner:
                             # print("\n\nMatch #", matchcounter, "   Total #", totalcounter,
                             #       "   URL: ", match.group(0))
                             comments_to_process.put(rawcomment)
-                            matchcounter += 1
-                    totalcounter += 1
 
                 lastpage = meta['next_page']
-                # print(lastpage)
 
-            time.sleep(4.5)
+            time.sleep(4)  # fixme: instead of every n seconds, refresh dynamically. (see comment below)
+            # pushshift will implement after_id (reddit.com/r/pushshift/comments/5gawot)
+            '''The closest thing you could do right now is to use the after parameter which works on the epoch time.
+            You would want to look at the highest epoch time you got and subtract one and then make another call like
+            this: https://apiv2.pushshift.io/reddit/comment/search/?after=1481537047&sort=asc (where the after value
+            is whatever the second highest epoch time was that you received). You will get duplicate comments between
+            calls like this, though -- but you are assured to get every comment. '''
 
 
 # Second pass
@@ -130,10 +126,10 @@ def main():
     comment_filter = CommentFilter()
     comment_scanner = CommentScanner()
 
-    process_thread = threading.Thread(target=comment_filter.run_pushshift, args=())
+    filter_thread = threading.Thread(target=comment_filter.run_pushshift, args=())
     scan_thread = threading.Thread(target=comment_scanner.run_pushshift, args=())
 
-    process_thread.start()
+    filter_thread.start()
     scan_thread.start()
 
 
