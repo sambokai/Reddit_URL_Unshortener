@@ -5,3 +5,4 @@ This application uses Open Source components. You can find the source code of th
 
 * [PRAW v4 (Python Reddit API Wrapper)](https://github.com/praw-dev/praw) Copyright (c), 2016, Bryce Boe (2-clause BSD license)
 * [Pushshift.io Reddit-API v2](https://pushshift.io/) 2016, Jason Baumgartner ([Twitter](twitter.com/jasonbaumgartne))
+* [ShortURL-Services-List](https://github.com/sambokai/ShortURL-Services-List) 2016, S. Bokai (Feel free to contribute!)
