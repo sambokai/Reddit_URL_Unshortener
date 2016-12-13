@@ -173,8 +173,7 @@ class CommentRevealer:
                     for match in matches:
                         if any(word in match for word in shorturl_services):
                             try:
-                                logging.info("Found a short-url. Unshortened link: ",
-                                             str(unshorten_url(match)))
+                                logging.info("Found a short-url. Unshortened link: " + str(unshorten_url(match)))
                                 logging.info(str(comment))
                             except Exception as e:
                                 logging.error(e)
