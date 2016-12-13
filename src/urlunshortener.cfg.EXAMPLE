@@ -33,4 +33,5 @@ max_commentlength = 1500
 scan_subreddit = all
 firstpass_url_regex_pattern = \.[a-zA-Z]{2,4}\/[a-zA-Z0-9-_\/?\.=]+
 secondpass_url_regex_pattern = (?:(?:https?:\/\/)|(?:www\.)|\b)[a-zA-Z0-9-]{1,11}\.[a-zA-Z]{2,4}\/[a-zA-Z0-9-_\/?\.=]{1,15}(?:\s|$)
+thirdpass_url_regex_pattern = (?:(?:https?:\/\/)|(?:www\.)|\b)[a-zA-Z0-9-]{1,11}\.[a-zA-Z]{2,4}\/[a-zA-Z0-9-_\/?\.=]{1,15}(?:\s|$)
 shorturlserviceslist_path = shorturl-services-list.txt

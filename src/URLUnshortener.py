@@ -22,6 +22,7 @@ comments_to_reveal = queue.Queue()
 
 
 def main():
+    """ TESTLINK: http://ow.ly/h4p230754Gt """
     read_config()
     connect_praw()
 
@@ -117,7 +118,6 @@ class CommentFilter:
         self.secondpass_pattern_string = cfg_file['urlunshortener']['secondpass_url_regex_pattern']
         self.secondpass_regex = re.compile(self.secondpass_pattern_string)
         print("\nCommentFilter (Pass 2) constructed.")
-
         print("Second-Pass RegEx: \"", self.secondpass_pattern_string, "\"")
 
     # in case pushshift stops working continue work on own implementation here
@@ -149,14 +149,23 @@ class CommentFilter:
 # Third pass
 class CommentRevealer:
     def __init__(self):
+        self.thirdpass_pattern_string = cfg_file['urlunshortener']['thirdpass_url_regex_pattern']
+        self.thirdpass_regex = re.compile(self.thirdpass_pattern_string)
         print("\nCommentRevealer (Pass 3) constructed.")
+        print("Third-Pass RegEx: \"", self.thirdpass_pattern_string, "\"")
 
-    @staticmethod
-    def run():  # TODO: only run this thread when comment is found & put into comments_to_reveal. dont run all the time
+    def run(self):  # TODO: only run this thread when comment is found & put in cmnts_to_reveal. dont run all the time
         while True:
             if comments_to_reveal.not_empty:
                 comment = comments_to_reveal.get()
-                print("shorturl: ", comment)
+                matches = self.thirdpass_regex.findall(comment['body'])
+                if len(matches) != 0:  # i prefer the explicit check over the pythonic 'if not matches'. deal with it ;)
+                    for match in matches:
+                        if any(word in match for word in shorturl_services):
+                            try:
+                                print("this is a match:", unshorten_url(match))
+                            except Exception as e:
+                                print(e)
 
 
 def read_config():
@@ -193,6 +202,8 @@ def connect_praw():
 
 
 def completeurl(url):
+    if url.endswith(" "):
+        url = url[:-1]
     if (not url.startswith('http://')) and (not url.startswith('https://')):
         return 'http://' + url
     else:
@@ -200,16 +211,27 @@ def completeurl(url):
 
 
 def unshorten_url(url):
+    resolved_url = resolve_shorturl(url)
+    if url == resolved_url:
+        raise Exception("URL is not shortened. URL: ", url)
+    else:
+        return resolved_url
+
+
+def resolve_shorturl(url):
     unshortened = None
     url = completeurl(url)
-    # get response and disallow automatic redirect-following, since we want to control that ourselves.
-    response = requests.get(url, allow_redirects=False)
+
+    # get response (header) and disallow automatic redirect-following, since we want to control that ourselves.
+    response = requests.head(url, allow_redirects=False)
     # if response code is a redirection (3xx)
-    if response.status_code % 300 < 100:
+    if 0 <= (response.status_code % 300) < 100:
         redirect_url = response.headers.get('Location')
         # Attempt to unshorten the redirect
-        unshortened = unshorten_url(redirect_url)
+        return resolve_shorturl(redirect_url)
     elif response.status_code == 200:
+        # request the entire content (not just header) on "200" pages, in order to check for meta-refresh
+        response = requests.get(url, allow_redirects=False)
         soup = BeautifulSoup(response.content, "html.parser")
         meta_refresh = soup.find("meta", attrs={"http-equiv": "Refresh"})
         # if html body contains a meta_refresh tag (which can be used to redirect to another url)
@@ -219,16 +241,13 @@ def unshorten_url(url):
             if text.strip().lower().startwith("url="):
                 meta_redirect_url = text[4:]
                 # attempt to unshorten the meta_refresh url
-                unshortened = unshorten_url(meta_redirect_url)
+                return resolve_shorturl(meta_redirect_url)
         else:
-            unshortened = url
+            return url
     else:
-        raise Exception("Invalid URL. (Response status code: " + str(response.status_code) + ")")
-
-    if url != completeurl(unshortened):
-        return unshortened
-    else:
-        raise Exception("URL was not shortened (" + unshortened + ")")
+        # fixme: include URL string in error message
+        raise Exception(str(
+            response.status_code) + " HTTP Response. URL could not be unshortened. Is the link valid? (" + url + ")")
 
 
 if __name__ == '__main__':
