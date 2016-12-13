@@ -7,13 +7,13 @@ import time
 
 import praw
 import requests
+from bs4 import BeautifulSoup
 
 # TODO: add "About" section in README.md (learning python, first python project, cs student, etc..)
 
 cfg_file = None
 reddit = None
 shorturl_services = None
-
 
 # Queue of comments, populated by CommentScanner, to be filtered by CommentFilter
 comments_to_filter = queue.Queue()
@@ -199,17 +199,36 @@ def completeurl(url):
         return url
 
 
-def reveal_long_url(url):
-    session = requests.Session()  # so connections are recycled
-    try:
-        resp = session.head(url, allow_redirects=True)
-        if url == resp.url:
-            raise Exception("URL is not shortened.")
-        return 'SUCCESS: ' + resp.url
-    except requests.exceptions.MissingSchema as e:
-        print(str(e))
-    except Exception as e:
-        print("ERROR:", str(e))
+def unshorten_url(url):
+    unshortened = None
+    url = completeurl(url)
+    # get response and disallow automatic redirect-following, since we want to control that ourselves.
+    response = requests.get(url, allow_redirects=False)
+    # if response code is a redirection (3xx)
+    if response.status_code % 300 < 100:
+        redirect_url = response.headers.get('Location')
+        # Attempt to unshorten the redirect
+        unshortened = unshorten_url(redirect_url)
+    elif response.status_code == 200:
+        soup = BeautifulSoup(response.content, "html.parser")
+        meta_refresh = soup.find("meta", attrs={"http-equiv": "Refresh"})
+        # if html body contains a meta_refresh tag (which can be used to redirect to another url)
+        if meta_refresh:
+            wait, text = meta_refresh["content"].split(";")
+            # if meta_refersh is indeed used to redirect and a url is provided
+            if text.strip().lower().startwith("url="):
+                meta_redirect_url = text[4:]
+                # attempt to unshorten the meta_refresh url
+                unshortened = unshorten_url(meta_redirect_url)
+        else:
+            unshortened = url
+    else:
+        raise Exception("Invalid URL. (Response status code: " + str(response.status_code) + ")")
+
+    if url != completeurl(unshortened):
+        return unshortened
+    else:
+        raise Exception("URL was not shortened (" + unshortened + ")")
 
 
 if __name__ == '__main__':
