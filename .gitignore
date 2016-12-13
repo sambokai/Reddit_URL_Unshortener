@@ -2,3 +2,4 @@ url-unshortener.cfg
 .idea/
 regextests.txt
 STORED_COMMENTS_LIST.p
+*.log

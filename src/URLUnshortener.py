@@ -4,13 +4,12 @@ import re
 import sys
 import threading
 import time
-
+import logging
 import praw
 import requests
 from bs4 import BeautifulSoup
 
 # TODO: add "About" section in README.md (learning python, first python project, cs student, etc..)
-
 cfg_file = None
 reddit = None
 shorturl_services = None
@@ -20,9 +19,15 @@ comments_to_filter = queue.Queue()
 # Queue of comments, populated by CommentFilter, to be revealed and answered to by CommentRevealer
 comments_to_reveal = queue.Queue()
 
+# Configure logger
+logging.basicConfig(filename='urlunshortener.log', format='%(asctime)s: [%(levelname)s] %(message)s',
+                    level=logging.INFO)
+logging.info("Initialized logger")
+
 
 def main():
     """ TESTLINK: http://ow.ly/h4p230754Gt """
+    logging.warning("Program started.")
     read_config()
     connect_praw()
 
@@ -47,6 +52,8 @@ class CommentScanner:
         self.subs_to_scan = reddit.subreddit(self.SCAN_SUBREDDIT)
         self.firstpass_pattern_string = cfg_file['urlunshortener']['firstpass_url_regex_pattern']
         self.firstpass_regex = re.compile(self.firstpass_pattern_string)
+
+        # Debug
         print("\nCommentScanner (Pass 1) constructed.")
         print("First-Pass RegEx: \"", self.firstpass_pattern_string, "\"")
         print("Subreddits to scan: ", self.SCAN_SUBREDDIT)
@@ -81,7 +88,7 @@ class CommentScanner:
         # fixme: dont skip first 50 comments; so instead of waiting, use the time to process the first 50 comments
         # wait before next api request, if we don't wait there will be no "metadata" element.
         time.sleep(initial_timeout)
-        print("\nStart fetching comments...")
+        logging.warning("Start fetching comments...")
         # comment fetch loop
         while True:
             # request the comment-batch that comes after the initial batch
@@ -107,9 +114,9 @@ class CommentScanner:
                 # wait before requesting the next batch
                 time.sleep(1)
             else:
-                print("\nReached latest page. Wait ", lastpage_timeout, " seconds.")
+                logging.info("Reached latest page. Wait " + str(lastpage_timeout) + " seconds.")
                 time.sleep(lastpage_timeout)
-            print(time.strftime('%X %x %Z'), lastpage_url)
+            logging.debug(str(lastpage_url))
 
 
 # Second pass
@@ -117,6 +124,8 @@ class CommentFilter:
     def __init__(self):
         self.secondpass_pattern_string = cfg_file['urlunshortener']['secondpass_url_regex_pattern']
         self.secondpass_regex = re.compile(self.secondpass_pattern_string)
+
+        # Debug
         print("\nCommentFilter (Pass 2) constructed.")
         print("Second-Pass RegEx: \"", self.secondpass_pattern_string, "\"")
 
@@ -138,7 +147,6 @@ class CommentFilter:
         while True:
             if comments_to_filter.not_empty:
                 comment = comments_to_filter.get()
-                print(comment)
                 match = self.secondpass_regex.search(comment['body'])
                 if match:
                     url = completeurl(match.group(0))
@@ -151,6 +159,8 @@ class CommentRevealer:
     def __init__(self):
         self.thirdpass_pattern_string = cfg_file['urlunshortener']['thirdpass_url_regex_pattern']
         self.thirdpass_regex = re.compile(self.thirdpass_pattern_string)
+
+        # Debug
         print("\nCommentRevealer (Pass 3) constructed.")
         print("Third-Pass RegEx: \"", self.thirdpass_pattern_string, "\"")
 
@@ -159,13 +169,15 @@ class CommentRevealer:
             if comments_to_reveal.not_empty:
                 comment = comments_to_reveal.get()
                 matches = self.thirdpass_regex.findall(comment['body'])
-                if len(matches) != 0:  # i prefer the explicit check over the pythonic 'if not matches'. deal with it ;)
+                if len(matches) != 0:  # i prefer the explicit check over the pythonic 'if not matches'.deal with it ;)
                     for match in matches:
                         if any(word in match for word in shorturl_services):
                             try:
-                                print("this is a match:", unshorten_url(match))
+                                logging.info("Found a short-url. Unshortened link: ",
+                                             str(unshorten_url(match)))
+                                logging.info(str(comment))
                             except Exception as e:
-                                print(e)
+                                logging.error(e)
 
 
 def read_config():
@@ -180,8 +192,8 @@ def read_config():
         with open(shorturl_list_path) as f:
             shorturl_services = f.read().splitlines()
     except FileNotFoundError as e:
-        print(e)
-        print("Please check services-list file or specified path in configuration file (.cfg) and restart "
+        logging.error(e)
+        logging.error("Please check services-list file or specified path in configuration file (.cfg) and restart "
               "URLUnshortener.")
         sys.exit(1)
 
@@ -195,10 +207,10 @@ def connect_praw():
     reddit_passwd = cfg_file['reddit']['password']
 
     # Start PRAW Reddit Session
-    print("Connecting...")
+    logging.info("Connecting to Reddit...")
     reddit = praw.Reddit(user_agent=user_agent, client_id=app_id, client_secret=app_secret, username=reddit_account,
                          password=reddit_passwd)
-    print("Connection successful. Reddit session started.\n")
+    logging.info("Connection successful. Reddit session started.")
 
 
 def completeurl(url):
@@ -254,5 +266,5 @@ if __name__ == '__main__':
     try:
         main()
     except KeyboardInterrupt:
-        print("\nInterrupted\n")
+        logging.error("KeyboardInterrupt")
         sys.exit(0)
