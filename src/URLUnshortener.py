@@ -1,15 +1,16 @@
 import configparser
+import logging
 import queue
 import re
-import sys
 import threading
 import time
-import logging
+
 import praw
 import requests
 from bs4 import BeautifulSoup
 
 # TODO: add "About" section in README.md (learning python, first python project, cs student, etc..)
+
 cfg_file = None
 reddit = None
 shorturl_services = None
@@ -22,7 +23,7 @@ comments_to_reveal = queue.Queue()
 # Configure logger
 logging.basicConfig(filename='urlunshortener.log', format='%(asctime)s: [%(levelname)s] %(message)s',
                     level=logging.INFO)
-logging.info("Initialized logger")
+logging.debug("Initialized logger")
 
 
 def main():
@@ -54,11 +55,10 @@ class CommentScanner:
         self.firstpass_regex = re.compile(self.firstpass_pattern_string)
 
         # Debug
-        print("\nCommentScanner (Pass 1) constructed.")
-        print("First-Pass RegEx: \"", self.firstpass_pattern_string, "\"")
-        print("Subreddits to scan: ", self.SCAN_SUBREDDIT)
+        logging.info("First-Pass RegEx: " + self.firstpass_pattern_string)
+        logging.info("Subreddits to scan: " + str(self.SCAN_SUBREDDIT))
 
-    # in case pushshift stops working continue work on own implementation here
+    # in case pushshift stops working continue work on own implementation
     '''
     def run(self):
         for comment in self.subs_to_scan.stream.comments():
@@ -88,7 +88,7 @@ class CommentScanner:
         # fixme: dont skip first 50 comments; so instead of waiting, use the time to process the first 50 comments
         # wait before next api request, if we don't wait there will be no "metadata" element.
         time.sleep(initial_timeout)
-        logging.warning("Start fetching comments...")
+        logging.info("Start fetching comments...")
         # comment fetch loop
         while True:
             # request the comment-batch that comes after the initial batch
@@ -112,7 +112,7 @@ class CommentScanner:
                 # use the "next_page" link to fetch the next batch of comments
                 next_page_url = lastpage_url
                 # wait before requesting the next batch
-                time.sleep(1)
+                time.sleep(2)
             else:
                 logging.info("Reached latest page. Wait " + str(lastpage_timeout) + " seconds.")
                 time.sleep(lastpage_timeout)
@@ -126,8 +126,7 @@ class CommentFilter:
         self.secondpass_regex = re.compile(self.secondpass_pattern_string)
 
         # Debug
-        print("\nCommentFilter (Pass 2) constructed.")
-        print("Second-Pass RegEx: \"", self.secondpass_pattern_string, "\"")
+        logging.info("Second-Pass RegEx: " + self.secondpass_pattern_string)
 
     # in case pushshift stops working continue work on own implementation here
     '''
@@ -161,8 +160,7 @@ class CommentRevealer:
         self.thirdpass_regex = re.compile(self.thirdpass_pattern_string)
 
         # Debug
-        print("\nCommentRevealer (Pass 3) constructed.")
-        print("Third-Pass RegEx: \"", self.thirdpass_pattern_string, "\"")
+        logging.info("Third-Pass RegEx: " + self.thirdpass_pattern_string)
 
     def run(self):  # TODO: only run this thread when comment is found & put in cmnts_to_reveal. dont run all the time
         while True:
@@ -173,8 +171,10 @@ class CommentRevealer:
                     for match in matches:
                         if any(word in match for word in shorturl_services):
                             try:
-                                logging.info("Found a short-url. Unshortened link: " + str(unshorten_url(match)))
-                                logging.info(str(comment))
+                                logging.info(
+                                    "Found a short-url. Short link: " + str(match) + " ; Unshortened link: " + str(
+                                        unshorten_url(match)))
+                                logging.info("Comment details: " + str(comment))
                             except Exception as e:
                                 logging.error(e)
 
@@ -193,8 +193,8 @@ def read_config():
     except FileNotFoundError as e:
         logging.error(e)
         logging.error("Please check services-list file or specified path in configuration file (.cfg) and restart "
-              "URLUnshortener.")
-        sys.exit(1)
+                      "URLUnshortener.")
+        raise SystemExit(0)
 
 
 def connect_praw():
@@ -266,4 +266,4 @@ if __name__ == '__main__':
         main()
     except KeyboardInterrupt:
         logging.error("KeyboardInterrupt")
-        sys.exit(0)
+        raise SystemExit(0)
