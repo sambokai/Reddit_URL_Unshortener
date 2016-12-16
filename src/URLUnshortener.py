@@ -21,14 +21,26 @@ comments_to_filter = queue.Queue()
 comments_to_reveal = queue.Queue()
 
 # Configure logger
-logging.basicConfig(filename='urlunshortener.log', format='%(asctime)s: [%(levelname)s] %(message)s',
-                    level=logging.INFO)
+logger = logging.getLogger()
+
+file_log_handler = logging.FileHandler('logfile.log')
+logger.addHandler(file_log_handler)
+
+stderr_log_handler = logging.StreamHandler()
+logger.addHandler(stderr_log_handler)
+
+formatter = logging.Formatter('%(asctime)s: [%(levelname)s] %(message)s')
+file_log_handler.setFormatter(formatter)
+stderr_log_handler.setFormatter(formatter)
+
+logger.setLevel(logging.INFO)
+
 logging.debug("Initialized logger")
 
 
 def main():
     """ TESTLINK: http://ow.ly/h4p230754Gt """
-    logging.warning("Program started.")
+    logger.warning("Program started.")
     read_config()
     connect_praw()
 
@@ -55,8 +67,8 @@ class CommentScanner:
         self.firstpass_regex = re.compile(self.firstpass_pattern_string)
 
         # Debug
-        logging.info("First-Pass RegEx: " + self.firstpass_pattern_string)
-        logging.info("Subreddits to scan: " + str(self.SCAN_SUBREDDIT))
+        logger.info("First-Pass RegEx: " + self.firstpass_pattern_string)
+        logger.info("Subreddits to scan: " + str(self.SCAN_SUBREDDIT))
 
     # in case pushshift stops working continue work on own implementation
     '''
@@ -88,7 +100,7 @@ class CommentScanner:
         # fixme: dont skip first 50 comments; so instead of waiting, use the time to process the first 50 comments
         # wait before next api request, if we don't wait there will be no "metadata" element.
         time.sleep(initial_timeout)
-        logging.info("Start fetching comments...")
+        logger.info("Start fetching comments...")
         # comment fetch loop
         while True:
             # request the comment-batch that comes after the initial batch
@@ -112,11 +124,11 @@ class CommentScanner:
                 # use the "next_page" link to fetch the next batch of comments
                 next_page_url = lastpage_url
                 # wait before requesting the next batch
-                time.sleep(2)
+                time.sleep(1)
             else:
-                logging.info("Reached latest page. Wait " + str(lastpage_timeout) + " seconds.")
+                logger.info("Reached latest page. Wait " + str(lastpage_timeout) + " seconds.")
                 time.sleep(lastpage_timeout)
-            logging.debug(str(lastpage_url))
+            logger.debug(str(lastpage_url))
 
 
 # Second pass
@@ -126,7 +138,7 @@ class CommentFilter:
         self.secondpass_regex = re.compile(self.secondpass_pattern_string)
 
         # Debug
-        logging.info("Second-Pass RegEx: " + self.secondpass_pattern_string)
+        logger.info("Second-Pass RegEx: " + self.secondpass_pattern_string)
 
     # in case pushshift stops working continue work on own implementation here
     '''
@@ -160,7 +172,7 @@ class CommentRevealer:
         self.thirdpass_regex = re.compile(self.thirdpass_pattern_string)
 
         # Debug
-        logging.info("Third-Pass RegEx: " + self.thirdpass_pattern_string)
+        logger.info("Third-Pass RegEx: " + self.thirdpass_pattern_string)
 
     def run(self):  # TODO: only run this thread when comment is found & put in cmnts_to_reveal. dont run all the time
         while True:
@@ -168,15 +180,19 @@ class CommentRevealer:
                 comment = comments_to_reveal.get()
                 matches = self.thirdpass_regex.findall(comment['body'])
                 if len(matches) != 0:  # i prefer the explicit check over the pythonic 'if not matches'.deal with it ;)
-                    for match in matches:
-                        if any(word in match for word in shorturl_services):
-                            try:
-                                logging.info(
+                    try:
+                        for match in matches:
+                            if any(word in match for word in shorturl_services):
+                                logger.info(
                                     "Found a short-url. Short link: " + str(match) + " ; Unshortened link: " + str(
                                         unshorten_url(match)))
-                                logging.info("Comment details: " + str(comment))
-                            except Exception as e:
-                                logging.error(e)
+                                contains_shorturl = True
+
+                    except Exception as e:
+                        logger.error(e)
+                    finally:
+                        if contains_shorturl:
+                            logger.info("Comment details: " + str(comment))
 
 
 def read_config():
@@ -191,9 +207,9 @@ def read_config():
         with open(shorturl_list_path) as f:
             shorturl_services = f.read().splitlines()
     except FileNotFoundError as e:
-        logging.error(e)
-        logging.error("Please check services-list file or specified path in configuration file (.cfg) and restart "
-                      "URLUnshortener.")
+        logger.error(e)
+        logger.error("Please check services-list file or specified path in configuration file (.cfg) and restart "
+                     "URLUnshortener.")
         raise SystemExit(0)
 
 
@@ -206,10 +222,10 @@ def connect_praw():
     reddit_passwd = cfg_file['reddit']['password']
 
     # Start PRAW Reddit Session
-    logging.info("Connecting to Reddit...")
+    logger.info("Connecting to Reddit...")
     reddit = praw.Reddit(user_agent=user_agent, client_id=app_id, client_secret=app_secret, username=reddit_account,
                          password=reddit_passwd)
-    logging.info("Connection successful. Reddit session started.")
+    logger.info("Connection successful. Reddit session started.")
 
 
 def completeurl(url):
@@ -230,7 +246,6 @@ def unshorten_url(url):
 
 
 def resolve_shorturl(url):
-    unshortened = None
     url = completeurl(url)
 
     # get response (header) and disallow automatic redirect-following, since we want to control that ourselves.
@@ -265,5 +280,5 @@ if __name__ == '__main__':
     try:
         main()
     except KeyboardInterrupt:
-        logging.error("KeyboardInterrupt")
+        logger.error("KeyboardInterrupt")
         raise SystemExit(0)
