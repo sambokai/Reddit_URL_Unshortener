@@ -40,7 +40,7 @@ logging.debug("Initialized logger")
 
 def main():
     """ TESTLINK: http://ow.ly/h4p230754Gt """
-    logger.warning("Program started.")
+    logger.warning("\n\n\nProgram started.")
     read_config()
     connect_praw()
 
@@ -85,7 +85,7 @@ class CommentScanner:
 
     def run_pushshift(self):
         initial_timeout = 10  # initial timeout before fetching the first batch
-        lastpage_timeout = 20  # timeout before restarting fetch, after having reached the most recent comment
+        lastpage_timeout = 30  # timeout before restarting fetch, after having reached the most recent comment
         lastpage_url = None  # used to check if site has changed
         # fetch the latest 50 comments
         request = requests.get('https://apiv2.pushshift.io/reddit/comment/search')
@@ -126,7 +126,7 @@ class CommentScanner:
                 # wait before requesting the next batch
                 time.sleep(1)
             else:
-                logger.info("Reached latest page. Wait " + str(lastpage_timeout) + " seconds.")
+                logger.debug("Reached latest page. Wait " + str(lastpage_timeout) + " seconds.")
                 time.sleep(lastpage_timeout)
             logger.debug(str(lastpage_url))
 
@@ -178,21 +178,34 @@ class CommentRevealer:
         while True:
             if comments_to_reveal.not_empty:
                 comment = comments_to_reveal.get()
-                matches = self.thirdpass_regex.findall(comment['body'])
-                if len(matches) != 0:  # i prefer the explicit check over the pythonic 'if not matches'.deal with it ;)
-                    try:
-                        for match in matches:
-                            if any(word in match for word in shorturl_services):
-                                logger.info(
-                                    "Found a short-url. Short link: " + str(match) + " ; Unshortened link: " + str(
-                                        unshorten_url(match)))
-                                contains_shorturl = True
+                self.checkforreveal(comment)
 
-                    except Exception as e:
-                        logger.error(e)
-                    finally:
-                        if contains_shorturl:
-                            logger.info("Comment details: " + str(comment))
+    def checkforreveal(self, comment):
+        matches = self.thirdpass_regex.findall(comment['body'])
+        if len(matches) != 0:  # i prefer the explicit check over the pythonic 'if not matches'.deal with it ;)
+            foundurls = []
+            try:
+                for match in matches:
+                    if any(word in match for word in shorturl_services):
+                        shorturl = str(match)
+                        unshortened = str(unshorten_url(match))
+                        foundurls.append((shorturl, unshortened))
+            except Exception as e:
+                logger.error(e)
+            finally:
+                if len(foundurls) > 0:
+                    # reply to comment
+                    self.replytocomment(comment, foundurls)
+                    # log
+                    logtext = "Found comment containing " + str(len(foundurls)) + " short-url(s):"
+                    for url in foundurls:
+                        logtext += ("\nShort link: " + url[0] + " ; Unshortened link: " + url[1])
+                    logtext += ("\nComment details: " + str(comment) + "\n")
+                    logger.info(logtext)
+
+    @staticmethod
+    def replytocomment(comment, foundurls):
+        """placeholder"""
 
 
 def read_config():
@@ -271,7 +284,6 @@ def resolve_shorturl(url):
         else:
             return url
     else:
-        # fixme: include URL string in error message
         raise Exception(str(
             response.status_code) + " HTTP Response. URL could not be unshortened. Is the link valid? (" + url + ")")
 
