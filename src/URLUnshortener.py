@@ -22,8 +22,13 @@ comments_to_reveal = queue.Queue()
 
 # Configure logger
 logger = logging.getLogger()
+logfilename = str(time.strftime("%Y-%m-%d_%H-%M-%S") + '.logfile.log')
+try:
+    file_log_handler = logging.FileHandler("logfiles/" + logfilename)
+except FileNotFoundError as e:
+    print(e)
+    print("Will only log to console.")
 
-file_log_handler = logging.FileHandler('logfile.log')
 logger.addHandler(file_log_handler)
 
 stderr_log_handler = logging.StreamHandler()
