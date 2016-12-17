@@ -8,7 +8,7 @@ import pickle
 from numpy.linalg.tests.test_linalg import a
 
 cfg_file = configparser.ConfigParser()
-cfg_file.read('url-unshortener.cfg')
+cfg_file.read('urlunshortener.cfg')
 
 MAX_COMMENTLENGTH = int(cfg_file['urlunshortener']['max_commentlength'])
 SCAN_SUBREDDIT = cfg_file.get('urlunshortener', 'scan_subreddit')
