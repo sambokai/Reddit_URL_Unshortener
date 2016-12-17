@@ -22,7 +22,7 @@ comments_to_reveal = queue.Queue()
 
 # Config File
 cfg_file = configparser.ConfigParser()
-cfg_file.read('url-unshortener.cfg')
+cfg_file.read('urlunshortener.cfg')
 
 # Configure logger
 defaultlevel = "INFO"
