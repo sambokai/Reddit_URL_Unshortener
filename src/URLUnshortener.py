@@ -195,8 +195,8 @@ class CommentRevealer:
                         shorturl = str(match)
                         unshortened = str(unshorten_url(match))
                         foundurls.append((shorturl, unshortened))
-            except Exception as e:
-                logger.error(e)
+            except Exception as exception:
+                logger.error(exception)
             finally:
                 if len(foundurls) > 0:
                     # reply to comment
@@ -256,7 +256,25 @@ def completeurl(url):
 
 
 def unshorten_url(url):
-    resolved_url = resolve_shorturl(url)
+    url = completeurl(url)
+    resolved_url = ""
+    maxattempts = 3
+    # try again in n seconds
+    timeout = 5
+    for attempt in range(maxattempts):
+        try:
+            resolved_url = resolve_shorturl(url)
+            break
+        except Exception as exception:
+            logging.error("Attempt #" + str(attempt + 1) + " out of " + str(maxattempts) + "max attempts failed. Error "
+                                                                                           "message: "
+                          + str(exception))
+            if attempt + 1 == maxattempts:
+                logging.error("All " + str(maxattempts) + "attempts have failed.")
+                raise exception
+            # wait [timeout] seconds before new attempt
+            time.sleep(timeout)
+
     if url == resolved_url:
         raise Exception("URL is not shortened. URL: ", url)
     else:
@@ -269,11 +287,11 @@ def resolve_shorturl(url):
     # get response (header) and disallow automatic redirect-following, since we want to control that ourselves.
     response = requests.head(url, allow_redirects=False)
     # if response code is a redirection (3xx)
-    if 0 <= (response.status_code % 300) < 100:
+    if 300 <= response.status_code <= 399:
         redirect_url = response.headers.get('Location')
         # Attempt to unshorten the redirect
         return resolve_shorturl(redirect_url)
-    elif response.status_code == 200:
+    elif 200 <= response.status_code <= 299:
         # request the entire content (not just header) on "200" pages, in order to check for meta-refresh
         response = requests.get(url, allow_redirects=False)
         soup = BeautifulSoup(response.content, "html.parser")
