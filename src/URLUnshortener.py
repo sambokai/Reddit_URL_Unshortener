@@ -210,7 +210,7 @@ class CommentRevealer:
                 logtext += ("\nComment details: " + str(comment) + "\n")
                 logger.info(logtext)
             else:
-                logger.info("False alarm. Comment did not contain valid shorturls. (Comment id: " +
+                logger.info("False alarm. Comment did not contain any valid shorturls. (Comment id: " +
                             str(comment['id']) + ")")
 
     @staticmethod
@@ -271,9 +271,8 @@ def unshorten_url(url):
             resolved_url = resolve_shorturl(url)
             break
         except Exception as exception:
-            logging.error("Attempt #" + str(attempt + 1) + " out of " + str(maxattempts) + "max attempts failed. Error "
-                                                                                           "message: "
-                          + str(exception))
+            logging.error("Attempt #" + str(attempt + 1) + " out of " + str(maxattempts) +
+                          " max attempts failed. Error message: " + str(exception))
             if attempt + 1 == maxattempts:
                 logging.error("All " + str(maxattempts) + " attempts have failed.")
                 raise exception
