@@ -11,7 +11,7 @@ from bs4 import BeautifulSoup
 
 # TODO: add "About" section in README.md (learning python, first python project, cs student, etc..)
 
-cfg_file = None
+
 reddit = None
 shorturl_services = None
 
@@ -20,33 +20,49 @@ comments_to_filter = queue.Queue()
 # Queue of comments, populated by CommentFilter, to be revealed and answered to by CommentRevealer
 comments_to_reveal = queue.Queue()
 
+# Config File
+cfg_file = configparser.ConfigParser()
+cfg_file.read('url-unshortener.cfg')
+
 # Configure logger
-logger = logging.getLogger()
+defaultlevel = "INFO"
 logfilename = str(time.strftime("%Y-%m-%d_%H-%M-%S") + '.logfile.log')
-try:
-    file_log_handler = logging.FileHandler("logfiles/" + logfilename)
-except FileNotFoundError as e:
-    print(e)
-    print("Will only log to console.")
+logfilepath = str(cfg_file.get('logger', 'logfile_directory_path'))
+logfilelevel = str(cfg_file.get('logger', 'eventlevel_threshold')).upper()
 
-logger.addHandler(file_log_handler)
-
-stderr_log_handler = logging.StreamHandler()
-logger.addHandler(stderr_log_handler)
+logger = logging.getLogger()
 
 formatter = logging.Formatter('%(asctime)s: [%(levelname)s] %(message)s')
-file_log_handler.setFormatter(formatter)
+
+stderr_log_handler = logging.StreamHandler()
 stderr_log_handler.setFormatter(formatter)
+logger.addHandler(stderr_log_handler)
 
-logger.setLevel(logging.INFO)
+try:
+    logger.setLevel(logfilelevel)
+    logger.debug(logfilelevel + " used as threshold level for logger.")
+except ValueError as ve:
+    logger.error(ve)
+    logger.error("Error in configuration file. Invalid threshold level. Default value "
+                 + defaultlevel + " will be used. Only messages above \"" + defaultlevel + "\"-level will be logged.")
+    logger.setLevel(defaultlevel)
 
-logging.debug("Initialized logger")
+try:
+    file_log_handler = logging.FileHandler(logfilepath + logfilename)
+    file_log_handler.setFormatter(formatter)
+    logger.addHandler(file_log_handler)
+    logger.debug("Logfile will be saved in: " + logfilepath + logfilename)
+except FileNotFoundError as e:
+    logger.error(e)
+    logger.error("Will only log to console.")
+
+logger.debug("Initialized logger")
 
 
 def main():
     """ TESTLINK: http://ow.ly/h4p230754Gt """
+    read_shorturlservices()
     logger.warning("\n\n\nProgram started.")
-    read_config()
     connect_praw()
 
     comment_filter = CommentFilter()
@@ -218,10 +234,8 @@ class CommentRevealer:
         """placeholder"""
 
 
-def read_config():
-    global cfg_file, shorturl_services
-    cfg_file = configparser.ConfigParser()
-    cfg_file.read('url-unshortener.cfg')
+def read_shorturlservices():
+    global shorturl_services
 
     shorturl_list_path = cfg_file.get('urlunshortener', 'shorturlserviceslist_path')
 

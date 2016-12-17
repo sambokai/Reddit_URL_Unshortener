@@ -35,3 +35,13 @@ firstpass_url_regex_pattern = \.[a-zA-Z]{2,4}\/[a-zA-Z0-9-_\/?\.=]+
 secondpass_url_regex_pattern = (?:(?:https?:\/\/)|(?:www\.)|\b)[a-zA-Z0-9-]{1,11}\.[a-zA-Z]{2,4}\/[a-zA-Z0-9-_\/?\.=]{1,15}(?:\s|$)
 thirdpass_url_regex_pattern = (?:(?:https?:\/\/)|(?:www\.)|\b)[a-zA-Z0-9-]{1,11}\.[a-zA-Z]{2,4}\/[a-zA-Z0-9-_\/?\.=]{1,15}(?:\s|$)
 shorturlserviceslist_path = shorturl-services-list.txt
+
+# Logger Configuration
+# eventlevel_threshold: Set which events are logged (console & file). Logging messages which are less severe than this
+#                       this setting will be ignored. List of logging levels (from low to high severity):
+#                       ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] Set this to "INFO" if you are unsure.
+# logfile_directory_path: The directory in which the logfiles will be saved.
+
+[logger]
+eventlevel_threshold = INFO
+logfile_directory_path = logfiles/
