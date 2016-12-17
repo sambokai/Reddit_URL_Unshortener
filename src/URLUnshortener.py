@@ -188,25 +188,30 @@ class CommentRevealer:
     def checkforreveal(self, comment):
         matches = self.thirdpass_regex.findall(comment['body'])
         if len(matches) != 0:  # i prefer the explicit check over the pythonic 'if not matches'.deal with it ;)
+            logger.info("Found potential candidate. (Comment id: "
+                        + str(comment['id']) + ") Comment details: " + str(comment))
             foundurls = []
-            try:
-                for match in matches:
-                    if any(word in match for word in shorturl_services):
-                        shorturl = str(match)
+            for match in matches:
+                if any(word in match for word in shorturl_services):
+                    shorturl = str(match)
+                    try:
                         unshortened = str(unshorten_url(match))
                         foundurls.append((shorturl, unshortened))
-            except Exception as exception:
-                logger.error(exception)
-            finally:
-                if len(foundurls) > 0:
-                    # reply to comment
-                    self.replytocomment(comment, foundurls)
-                    # log
-                    logtext = "Found comment containing " + str(len(foundurls)) + " short-url(s):"
-                    for url in foundurls:
-                        logtext += ("\nShort link: " + url[0] + " ; Unshortened link: " + url[1])
-                    logtext += ("\nComment details: " + str(comment) + "\n")
-                    logger.info(logtext)
+                    except Exception as exception:
+                        logging.error(str(exception))
+
+            if len(foundurls) > 0:
+                # reply to comment
+                self.replytocomment(comment, foundurls)
+                # log
+                logtext = "Found comment containing " + str(len(foundurls)) + " short-url(s):"
+                for url in foundurls:
+                    logtext += ("\nShort link: " + url[0] + " ; Unshortened link: " + url[1])
+                logtext += ("\nComment details: " + str(comment) + "\n")
+                logger.info(logtext)
+            else:
+                logger.info("False alarm. Comment did not contain valid shorturls. (Comment id: " +
+                            str(comment['id']) + ")")
 
     @staticmethod
     def replytocomment(comment, foundurls):
@@ -270,7 +275,7 @@ def unshorten_url(url):
                                                                                            "message: "
                           + str(exception))
             if attempt + 1 == maxattempts:
-                logging.error("All " + str(maxattempts) + "attempts have failed.")
+                logging.error("All " + str(maxattempts) + " attempts have failed.")
                 raise exception
             # wait [timeout] seconds before new attempt
             time.sleep(timeout)
