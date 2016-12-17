@@ -40,7 +40,7 @@ logger.addHandler(stderr_log_handler)
 
 try:
     logger.setLevel(logfilelevel)
-    logger.debug(logfilelevel + " used as threshold level for logger.")
+    logger.info(logfilelevel + " used as threshold level for logger.")
 except ValueError as ve:
     logger.error(ve)
     logger.error("Error in configuration file. Invalid threshold level. Default value "
@@ -51,7 +51,7 @@ try:
     file_log_handler = logging.FileHandler(logfilepath + logfilename)
     file_log_handler.setFormatter(formatter)
     logger.addHandler(file_log_handler)
-    logger.debug("Logfile will be saved in: " + logfilepath + logfilename)
+    logger.info("Logfile will be saved in: " + logfilepath + logfilename)
 except FileNotFoundError as e:
     logger.error(e)
     logger.error("Will only log to console.")
