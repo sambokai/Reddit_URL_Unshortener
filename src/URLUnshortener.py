@@ -306,6 +306,11 @@ def unshorten_url(url):
 
     if url == resolved_url:
         raise Exception("URL is not shortened. URL: ", url)
+    elif url.lower().startswith("http://") and resolved_url.lower().startswith("https://"):
+        https_version = url[:4] + 's' + url[4:]
+        if https_version == resolved_url:
+            raise Exception("URL is not shortened. Target URL was https version of original link. URL: ", url)
+
     else:
         return resolved_url
 
