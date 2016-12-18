@@ -4,13 +4,24 @@ import queue
 import re
 import threading
 import time
+from http import cookiejar
 
 import praw
 import requests
 from bs4 import BeautifulSoup
 
+
 # TODO: add "About" section in README.md (learning python, first python project, cs student, etc..)
 
+# disallow cookies in all requests
+class BlockAll(cookiejar.CookiePolicy):
+    return_ok = set_ok = domain_return_ok = path_return_ok = lambda self, *args, **kwargs: False
+    netscape = True
+    rfc2965 = hide_cookie2 = False
+
+
+r_session = requests.Session()
+r_session.cookies.set_policy(BlockAll())
 
 reddit = None
 shorturl_services = None
@@ -109,7 +120,7 @@ class CommentScanner:
         lastpage_timeout = 30  # timeout before restarting fetch, after having reached the most recent comment
         lastpage_url = None  # used to check if site has changed
         # fetch the latest 50 comments
-        request = requests.get('https://apiv2.pushshift.io/reddit/comment/search')
+        request = r_session.get('https://apiv2.pushshift.io/reddit/comment/search')
         json = request.json()
         comments = json["data"]
 
@@ -125,7 +136,7 @@ class CommentScanner:
         # comment fetch loop
         while True:
             # request the comment-batch that comes after the initial batch
-            request = requests.get(next_page_url)
+            request = r_session.get(next_page_url)
             json = request.json()
             comments = json["data"]
             meta = json["metadata"]
@@ -301,9 +312,10 @@ def unshorten_url(url):
 
 def resolve_shorturl(url):
     url = completeurl(url)
-
+    # desktop firefox user agent
+    headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X x.y; rv:10.0) Gecko/20100101 Firefox/10.0'}
     # get response (header) and disallow automatic redirect-following, since we want to control that ourselves.
-    response = requests.head(url, allow_redirects=False)
+    response = r_session.head(url, headers=headers, allow_redirects=False)
     # if response code is a redirection (3xx)
     if 300 <= response.status_code <= 399:
         redirect_url = response.headers.get('Location')
@@ -311,17 +323,22 @@ def resolve_shorturl(url):
         return resolve_shorturl(redirect_url)
     elif 200 <= response.status_code <= 299:
         # request the entire content (not just header) on "200" pages, in order to check for meta-refresh
-        response = requests.get(url, allow_redirects=False)
+        response = r_session.get(url, headers=headers, allow_redirects=False)
         soup = BeautifulSoup(response.content, "html.parser")
         meta_refresh = soup.find("meta", attrs={"http-equiv": "Refresh"})
+        # dirty check for lower case "refresh tag" i.e. used by twitter (t.co)
+        if not meta_refresh:
+            meta_refresh = soup.find("meta", attrs={"http-equiv": "refresh"})
         # if html body contains a meta_refresh tag (which can be used to redirect to another url)
         if meta_refresh:
             wait, text = meta_refresh["content"].split(";")
             # if meta_refersh is indeed used to redirect and a url is provided
-            if text.strip().lower().startwith("url="):
-                meta_redirect_url = text[4:]
+            textlow = text.strip().lower()[:4]
+            if textlow == "url=":
+                meta_redirect_url = text.strip()[4:]
                 # attempt to unshorten the meta_refresh url
                 return resolve_shorturl(meta_redirect_url)
+        # fixme: check for javascript redirect using selenium
         else:
             return url
     else:
