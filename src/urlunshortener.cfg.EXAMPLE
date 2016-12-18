@@ -32,8 +32,8 @@ owner_username = your_username
 max_commentlength = 1500
 scan_subreddit = all
 firstpass_url_regex_pattern = \.[a-zA-Z]{2,4}\/[a-zA-Z0-9-_\/?\.=]+
-secondpass_url_regex_pattern = (?:(?:https?:\/\/)|(?:www\.)|\b)[a-zA-Z0-9-]{1,11}\.[a-zA-Z]{2,4}\/[a-zA-Z0-9-_\/?\.=]{1,15}\b
-thirdpass_url_regex_pattern = (?:(?:https?:\/\/)|(?:www\.)|\b)[a-zA-Z0-9-]{1,11}\.[a-zA-Z]{2,4}\/[a-zA-Z0-9-_\/?\.=]{1,15}\b
+secondpass_url_regex_pattern = (?:(?:https?:\/\/)|(?:www\.)|\b)[a-zA-Z0-9-]{1,11}\.[a-zA-Z]{2,4}\/[a-zA-Z0-9-_\/?\.=]+\b
+thirdpass_url_regex_pattern = (?:(?:https?:\/\/)|(?:www\.)|\b)[a-zA-Z0-9-]{1,11}\.[a-zA-Z]{2,4}\/[a-zA-Z0-9-_\/?\.=]+\b
 shorturlserviceslist_path = shorturl-services-list.txt
 
 # Logger Configuration
