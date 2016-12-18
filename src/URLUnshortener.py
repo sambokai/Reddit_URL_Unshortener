@@ -37,7 +37,7 @@ cfg_file.read('urlunshortener.cfg')
 
 # Configure logger
 defaultlevel = "INFO"
-logfilename = str(time.strftime("%Y-%m-%d_%H-%M-%S") + '.logfile.log')
+logfilename = str(time.strftime("%Y-%m-%d.%H-%M-%S") + '.urlunshortener.log')
 logfilepath = str(cfg_file.get('logger', 'logfile_directory_path'))
 logfilelevel = str(cfg_file.get('logger', 'eventlevel_threshold')).upper()
 
