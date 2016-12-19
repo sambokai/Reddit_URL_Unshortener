@@ -209,7 +209,7 @@ class CommentRevealer:
         self.replyhead = cfg_file.get('replytexts', 'reply_header')
         self.replyfooter = cfg_file.get('replytexts', 'reply_footer')
         self.replylink = cfg_file.get('replytexts', 'reply_link')
-
+        self.domain_blacklist = cfg_file.get('urlunshortener', 'blacklist_domains').replace(' ', '').split(',')
         # Debug
         logger.info("Third-Pass RegEx: " + self.thirdpass_pattern_string)
 
@@ -232,8 +232,9 @@ class CommentRevealer:
                         + str(comment['id']) + ") Comment details: " + str(comment))
             foundurls = []
             for match in matches:
-                # fixme: check with lowercase strings. shorturl list.txt has mixed cases
-                if any(word.lower() in match.lower() for word in shorturl_services):
+                # check if it is a shorturl. and check if it contains a blacklisted domain.
+                if any(word.lower() in match.lower() for word in shorturl_services) \
+                        and not any(word.lower() in match.lower() for word in self.domain_blacklist):
                     shorturl = str(match)
                     try:
                         unshortened = unshorten_url(match)

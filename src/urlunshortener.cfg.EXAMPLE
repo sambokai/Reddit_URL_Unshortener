@@ -11,7 +11,6 @@
 # app_id: Your Reddit Client ID
 # app_secret: Your Reddit Client Secret
 # owner_username: Your main account's username
-
 [reddit] # CAUTION: DO NOT PUBLISH your real credentials. Use an example .cfg like this one when publishing to github or similar!
 user_agent = reddit_username
 username = reddit_username
@@ -26,8 +25,10 @@ owner_username = your_username
 #                    This number should not exceed 1500 because of performance reasons.
 # scan_subreddit: This is the sub or list of subs to scan for new posts. To scan all posts use "all". For a single sub, use "sub1". For multiple subreddits, use "sub1+sub2+sub3+..."
 # [EXPERT] firstpass_url_regex_pattern: RegEx pattern that is used in the first-pass-thread.
-# [EXPERT] secondpass_url_regex_pattern : RegEx pattern that is used in the second-pass-thread
-
+# [EXPERT] secondpass_url_regex_pattern: RegEx pattern that is used in the second-pass-thread
+# [EXPERT] thirdpass_url_regex_pattern: RegEx pattern that is used in the third-pass-thread
+# shorturlserviceslist_path: Path to a list of short-url-services. (For a curated list go to https://github.com/sambokai/ShortURL-Services-List)
+# blacklist_domains: shorturl links are ignored if any of these words is found in them. separate with a comma [","]
 [urlunshortener]
 max_commentlength = 1500
 scan_subreddit = all
@@ -35,6 +36,7 @@ firstpass_url_regex_pattern = \.[a-zA-Z]{2,4}\/[a-zA-Z0-9-_\/?\.=]+
 secondpass_url_regex_pattern = (?:(?:https?:\/\/)|(?:www\.)|\b)[a-zA-Z0-9-]{1,11}\.[a-zA-Z]{2,4}\/[a-zA-Z0-9-_\/?\.=]+\b
 thirdpass_url_regex_pattern = (?:(?:https?:\/\/)|(?:www\.)|\b)[a-zA-Z0-9-]{1,11}\.[a-zA-Z]{2,4}\/[a-zA-Z0-9-_\/?\.=]+\b
 shorturlserviceslist_path = shorturl-services-list.txt
+blacklist_domains = goo.gl/maps/, goo.gl/photos/, goo.gl/forms/
 
 # TEXT STRINGS USED IN BOT-REPLIES.
 # INFO: Multiline text has to be indented.
@@ -44,7 +46,6 @@ shorturlserviceslist_path = shorturl-services-list.txt
 # WRONG_example_value_line_3
 #
 # reply_footer: Appended to every bot-reply as a signature. Used for bug-report, feature-suggestion, github-link, etc.
-
 [replytexts]
 reply_header = I found {urlcount} short URL(s) in your comment.
 
@@ -70,8 +71,7 @@ reply_footer =
 #                       this setting will be ignored. List of logging levels (from low to high severity):
 #                       ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] Set this to "INFO" if you are unsure.
 # logfile_directory_path: The directory in which the logfiles will be saved.
-
 [logger]
-eventlevel_threshold = INFO
+eventlevel_threshold = debug
 logfile_directory_path = logfiles/
 
