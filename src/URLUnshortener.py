@@ -147,8 +147,10 @@ class CommentScanner:
                 # process the current batch of comments
                 for rawcomment in comments:
                     body = rawcomment['body']
+                    # todo: implement a blacklist of users and subreddits in the check below.
                     # don't process comments of yourself AND don't process comments that are longer than max (cfg file)
-                    if rawcomment['author'] != reddit_account and len(body) < self.max_commentlength:
+                    is_me = rawcomment['author'].lower() == reddit_account.lower()
+                    if not is_me and len(body) < self.max_commentlength:
                         match = self.firstpass_regex.search(body)
                         if match:
                             # put relevant comments (containing urls) in queue for other thread to further process
@@ -215,7 +217,13 @@ class CommentRevealer:
         while True:
             if comments_to_reveal.not_empty:
                 comment = comments_to_reveal.get()
-                self.checkforreveal(comment)
+                # checking if own comment - safety net for debugging
+                is_me = comment['author'].lower() == reddit_account.lower()
+                if not is_me:
+                    self.checkforreveal(comment)
+                    time.sleep(2)
+                else:
+                    logger.debug("Ignoring own comment. @CommentRevealer Details: " + str(comment))
 
     def checkforreveal(self, comment):
         matches = self.thirdpass_regex.findall(comment['body'])
@@ -224,6 +232,7 @@ class CommentRevealer:
                         + str(comment['id']) + ") Comment details: " + str(comment))
             foundurls = []
             for match in matches:
+                # fixme: check with lowercase strings. shorturl list.txt has mixed cases
                 if any(word in match for word in shorturl_services):
                     shorturl = str(match)
                     try:
@@ -253,7 +262,7 @@ class CommentRevealer:
         for index, link_entry in enumerate(foundurls, start=0):
             shorturl = str(link_entry[0])
             fullurl = str(link_entry[1])
-            replyline = self.replylink.format(linknumber=index+1, shorturl=shorturl, fullurl=fullurl)
+            replyline = self.replylink.format(linknumber=index + 1, shorturl=shorturl, fullurl=fullurl)
             replylinks.append(replyline)
         replylinks = ''.join(replylinks)
 
@@ -266,7 +275,6 @@ class CommentRevealer:
         # if not allowed to post reply (i.e. ratelimit) wait some time and try again. up to N (maybe 2?) times.
         except Exception as exception:
             logger.error("Could not reply to comment " + str(comment['id']) + "\nError: " + str(exception))
-
 
 
 def read_shorturlservices():
