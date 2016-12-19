@@ -25,6 +25,7 @@ r_session.cookies.set_policy(BlockAll())
 
 reddit = None
 shorturl_services = None
+reddit_account = None
 
 # Queue of comments, populated by CommentScanner, to be filtered by CommentFilter
 comments_to_filter = queue.Queue()
@@ -146,7 +147,8 @@ class CommentScanner:
                 # process the current batch of comments
                 for rawcomment in comments:
                     body = rawcomment['body']
-                    if len(body) < self.max_commentlength:
+                    # don't process comments of yourself AND don't process comments that are longer than max (cfg file)
+                    if rawcomment['author'] != reddit_account and len(body) < self.max_commentlength:
                         match = self.firstpass_regex.search(body)
                         if match:
                             # put relevant comments (containing urls) in queue for other thread to further process
@@ -288,6 +290,7 @@ def connect_praw():
     app_id = cfg_file['reddit']['app_id']
     app_secret = cfg_file['reddit']['app_secret']
     user_agent = cfg_file['reddit']['user_agent']
+    global reddit_account
     reddit_account = cfg_file['reddit']['username']
     reddit_passwd = cfg_file['reddit']['password']
 
