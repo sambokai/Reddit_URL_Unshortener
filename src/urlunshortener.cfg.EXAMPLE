@@ -3,7 +3,7 @@
 #          (e.g. Add to .gitignore or .hgignore and ensure only bot user has
 #          access)
 
-# Reddit Configuration
+# REDDIT CONFIGURATION
 # user_agent: User agent reported by praw (username is recommended unless you
 #             know what you are doing. See: https://github.com/reddit/reddit/wiki/API)
 # username: Reddit username to use
@@ -20,7 +20,7 @@ app_id = reddit_clientID
 app_secret = reddit_clientSecret
 owner_username = your_username
 
-# Bot Configuration
+# BOT CONFIGURATION
 # max_commentlength: Max. size of scanned comments. Any comment above this number is ignored.
 #                    User-Posts containing URLs usually average around 600 characters. Most Posts between 600 and 1500 are bots.
 #                    This number should not exceed 1500 because of performance reasons.
@@ -36,12 +36,42 @@ secondpass_url_regex_pattern = (?:(?:https?:\/\/)|(?:www\.)|\b)[a-zA-Z0-9-]{1,11
 thirdpass_url_regex_pattern = (?:(?:https?:\/\/)|(?:www\.)|\b)[a-zA-Z0-9-]{1,11}\.[a-zA-Z]{2,4}\/[a-zA-Z0-9-_\/?\.=]+\b
 shorturlserviceslist_path = shorturl-services-list.txt
 
-# Logger Configuration
+# TEXT STRINGS USED IN BOT-REPLIES.
+# INFO: Multiline text has to be indented.
+# Example:
+# example_key = CORRECT_example_value_line_1
+#               CORRECT_example_value_line_2
+# WRONG_example_value_line_3
+#
+# reply_footer: Appended to every bot-reply as a signature. Used for bug-report, feature-suggestion, github-link, etc.
+
+[replytexts]
+reply_header = I found {urlcount} short URL(s) in your comment.
+
+               &nbsp;
+
+reply_link =
+             > Link #{linknumber}:
+
+             > Short: {shorturl}
+
+             > Full: {fullurl}
+
+             &nbsp;
+reply_footer =
+               *****
+               ^Please ^don't ^be ^too ^harsh. ^I'm ^just ^a ^bot.
+               ^| [^Source ^Code](https://github.com/sambokai/URL_Unshortener)
+               ^| [^Report ^Bug](https://www.reddit.com/message/compose?to=URL-Unshortener&subject=Report%%20Bug&message=Please%%20describe%%20the%%20bug%%20here.%%20Thank%%20you%%20very%%20much!)
+               ^| [^Suggest ^Feature](https://www.reddit.com/message/compose?to=URL-Unshortener&subject=Feature%%20Suggestion&message=Please%%20describe%%20your%%20suggestion%%20here.%%20Thank%%20you%%20very%%20much!)
+
+# LOGGER CONFIGURATION
 # eventlevel_threshold: Set which events are logged (console & file). Logging messages which are less severe than this
 #                       this setting will be ignored. List of logging levels (from low to high severity):
 #                       ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] Set this to "INFO" if you are unsure.
 # logfile_directory_path: The directory in which the logfiles will be saved.
 
 [logger]
-eventlevel_threshold = INFO
+eventlevel_threshold = debug
 logfile_directory_path = logfiles/
+

@@ -202,6 +202,9 @@ class CommentRevealer:
     def __init__(self):
         self.thirdpass_pattern_string = cfg_file['urlunshortener']['thirdpass_url_regex_pattern']
         self.thirdpass_regex = re.compile(self.thirdpass_pattern_string)
+        self.replyhead = cfg_file.get('replytexts', 'reply_header')
+        self.replyfooter = cfg_file.get('replytexts', 'reply_footer')
+        self.replylink = cfg_file.get('replytexts', 'reply_link')
 
         # Debug
         logger.info("Third-Pass RegEx: " + self.thirdpass_pattern_string)
@@ -223,7 +226,8 @@ class CommentRevealer:
                     shorturl = str(match)
                     try:
                         unshortened = unshorten_url(match)
-                        foundurls.append((shorturl, unshortened))
+                        link_entry = (shorturl, unshortened)
+                        foundurls.append(link_entry)
                     except Exception as exception:
                         logging.error(str(exception))
 
@@ -240,9 +244,21 @@ class CommentRevealer:
                 logger.info("False alarm. Comment did not contain any valid shorturls. (Comment id: " +
                             str(comment['id']) + ")")
 
-    @staticmethod
-    def replytocomment(comment, foundurls):
-        """placeholder"""
+    def replytocomment(self, comment, foundurls):
+        replylinks = []
+        self.replyhead = self.replyhead.format(urlcount=str(len(foundurls)))
+
+        for index, link_entry in enumerate(foundurls, start=0):
+            shorturl = str(link_entry[0])
+            fullurl = str(link_entry[1])
+            replyline = self.replylink.format(linknumber=index+1, shorturl=shorturl, fullurl=fullurl)
+            replylinks.append(replyline)
+        replylinks = ''.join(replylinks)
+
+        reply = self.replyhead + replylinks + self.replyfooter
+        logger.info("Replying to comment " + comment['id'] + "\nReply content: " + reply)
+        comment = reddit.comment(comment['id'])
+        comment.reply(reply)
 
 
 def read_shorturlservices():
