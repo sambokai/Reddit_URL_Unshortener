@@ -19,6 +19,11 @@ app_id = reddit_clientID
 app_secret = reddit_clientSecret
 owner_username = your_username
 
+# API CREDENTIALS
+# wot_apikey: apikey for mywot.com (web of trust api)
+[api] # CAUTION: DO NOT PUBLISH your real credentials. Use an example .cfg like this one when publishing to github or similar!
+wot_apikey = your_wot_apikey
+
 # BOT CONFIGURATION
 # max_commentlength: Max. size of scanned comments. Any comment above this number is ignored.
 #                    User-Posts containing URLs usually average around 600 characters. Most Posts between 600 and 1500 are bots.
@@ -58,8 +63,13 @@ reply_link =
 
              > Full: {fullurl}
 
+             > Trustworthiness: {trust}/100 Child safety: {child}/100
+
              &nbsp;
+
 reply_footer =
+
+               ^^Safety ^^ratings ^^provided ^^by [^^Web ^^of ^^Trust](https://www.mywot.com)
                *****
                ^Please ^don't ^be ^too ^harsh. ^I'm ^just ^a ^bot.
                ^| [^Source ^Code](https://github.com/sambokai/URL_Unshortener)

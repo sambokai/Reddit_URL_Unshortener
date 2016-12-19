@@ -20,8 +20,8 @@ class BlockAll(cookiejar.CookiePolicy):
     rfc2965 = hide_cookie2 = False
 
 
-r_session = requests.Session()
-r_session.cookies.set_policy(BlockAll())
+req_session = requests.Session()
+req_session.cookies.set_policy(BlockAll())
 
 reddit = None
 shorturl_services = None
@@ -121,7 +121,7 @@ class CommentScanner:
         lastpage_timeout = 30  # timeout before restarting fetch, after having reached the most recent comment
         lastpage_url = None  # used to check if site has changed
         # fetch the latest 50 comments
-        request = r_session.get('https://apiv2.pushshift.io/reddit/comment/search')
+        request = req_session.get('https://apiv2.pushshift.io/reddit/comment/search')
         json = request.json()
         comments = json["data"]
 
@@ -137,7 +137,7 @@ class CommentScanner:
         # comment fetch loop
         while True:
             # request the comment-batch that comes after the initial batch
-            request = r_session.get(next_page_url)
+            request = req_session.get(next_page_url)
             json = request.json()
             comments = json["data"]
             meta = json["metadata"]
@@ -210,6 +210,8 @@ class CommentRevealer:
         self.replyfooter = cfg_file.get('replytexts', 'reply_footer')
         self.replylink = cfg_file.get('replytexts', 'reply_link')
         self.domain_blacklist = cfg_file.get('urlunshortener', 'blacklist_domains').replace(' ', '').split(',')
+
+        self.wot_apikey = cfg_file.get('api', 'wot_apikey')
         # Debug
         logger.debug("Third-Pass RegEx: " + self.thirdpass_pattern_string)
 
@@ -247,7 +249,7 @@ class CommentRevealer:
                 # reply to comment
                 self.replytocomment(comment, foundurls)
                 # log
-                logtext = "Found comment containing " + str(len(foundurls)) + " short-url(s):"
+                logtext = "Found / replied to comment containing " + str(len(foundurls)) + " short-url(s):"
                 for url in foundurls:
                     logtext += ("\nShort link: " + url[0] + " ; Unshortened link: " + url[1])
                 logtext += ("\nComment details: " + str(comment) + "\n")
@@ -263,7 +265,9 @@ class CommentRevealer:
         for index, link_entry in enumerate(foundurls, start=0):
             shorturl = str(link_entry[0])
             fullurl = str(link_entry[1])
-            replyline = self.replylink.format(linknumber=index + 1, shorturl=shorturl, fullurl=fullurl)
+            trust_rating = self.wot_trustcheck(fullurl)
+            replyline = self.replylink.format(linknumber=index + 1, shorturl=shorturl, fullurl=fullurl,
+                                              trust=trust_rating[0], child=trust_rating[1])
             replylinks.append(replyline)
         replylinks = ''.join(replylinks)
 
@@ -276,6 +280,24 @@ class CommentRevealer:
         # if not allowed to post reply (i.e. ratelimit) wait some time and try again. up to N (maybe 2?) times.
         except Exception as exception:
             logger.error("Could not reply to comment " + str(comment['id']) + "\nError: " + str(exception))
+
+    def wot_trustcheck(self, domain):
+        api_link = "http://api.mywot.com/0.4/public_link_json2?hosts={domain}/&key={apikey}"
+        api_link = api_link.format(domain=domain, apikey=self.wot_apikey)
+        wot_response = req_session.get(api_link)
+        wot_json = wot_response.json()
+        trustworthiness = None
+        child_safety = None
+        # get only ONE key from json response (not elegant, but haven't found a better way of getting value of unknown
+        # key from a json object
+        for key, value in wot_json.items():
+            # tuples of trustworthiness and childsafety rating.
+            # element 0 is rating, element 1 is wot's confidence in that rating.
+            trustworthiness = (value['0'][0], value['0'][1])
+            child_safety = (value['4'][0], value['4'][1])
+            break
+        rating = (trustworthiness[0], child_safety[0])
+        return rating
 
 
 def read_shorturlservices():
@@ -358,7 +380,7 @@ def resolve_shorturl(url):
     # internet explorer 11 user-agent string provides highest compatibility (i.e. with t.co, google drive)
     headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.3; Trident/7.0; rv:11.0) like Gecko'}
     #  get response (header) and disallow automatic redirect-following, since we want to control that ourselves.
-    response = r_session.head(url, headers=headers, allow_redirects=False)
+    response = req_session.head(url, headers=headers, allow_redirects=False)
     # if response code is a redirection (3xx)
     if 300 <= response.status_code <= 399:
         redirect_url = response.headers.get('Location')
@@ -366,7 +388,7 @@ def resolve_shorturl(url):
         return resolve_shorturl(redirect_url)
     elif 200 <= response.status_code <= 299:
         # request the entire content (not just header) on "200" pages, in order to check for meta-refresh
-        response = r_session.get(url, headers=headers, allow_redirects=False)
+        response = req_session.get(url, headers=headers, allow_redirects=False)
         soup = BeautifulSoup(response.content, "html.parser")
         meta_refresh = soup.find("meta", attrs={"http-equiv": "Refresh"})
         # dirty check for lower case "refresh tag" i.e. used by twitter (t.co)
