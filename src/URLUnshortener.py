@@ -74,7 +74,7 @@ logger.debug("Initialized logger")
 def main():
     """ TESTLINK: http://ow.ly/h4p230754Gt """
     read_shorturlservices()
-    logger.warning("\n\n\nProgram started.")
+    logger.warning("Program started.")
     connect_praw()
 
     comment_filter = CommentFilter()
@@ -100,8 +100,8 @@ class CommentScanner:
         self.firstpass_regex = re.compile(self.firstpass_pattern_string)
 
         # Debug
-        logger.info("First-Pass RegEx: " + self.firstpass_pattern_string)
-        logger.info("Subreddits to scan: " + str(self.SCAN_SUBREDDIT))
+        logger.debug("First-Pass RegEx: " + self.firstpass_pattern_string)
+        logger.debug("Subreddits to scan: " + str(self.SCAN_SUBREDDIT))
 
     # in case pushshift stops working continue work on own implementation
     '''
@@ -174,7 +174,7 @@ class CommentFilter:
         self.secondpass_regex = re.compile(self.secondpass_pattern_string)
 
         # Debug
-        logger.info("Second-Pass RegEx: " + self.secondpass_pattern_string)
+        logger.debug("Second-Pass RegEx: " + self.secondpass_pattern_string)
 
     # in case pushshift stops working continue work on own implementation here
     '''
@@ -211,7 +211,7 @@ class CommentRevealer:
         self.replylink = cfg_file.get('replytexts', 'reply_link')
         self.domain_blacklist = cfg_file.get('urlunshortener', 'blacklist_domains').replace(' ', '').split(',')
         # Debug
-        logger.info("Third-Pass RegEx: " + self.thirdpass_pattern_string)
+        logger.debug("Third-Pass RegEx: " + self.thirdpass_pattern_string)
 
     def run(self):  # TODO: only run this thread when comment is found & put in cmnts_to_reveal. dont run all the time
         while True:
