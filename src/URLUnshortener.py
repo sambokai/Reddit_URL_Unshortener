@@ -197,7 +197,7 @@ class CommentFilter:
                 match = self.secondpass_regex.search(comment['body'])
                 if match:
                     url = completeurl(match.group(0))
-                    if any(word in url for word in shorturl_services):
+                    if any(word.lower() in url.lower() for word in shorturl_services):
                         comments_to_reveal.put(comment)
 
 
@@ -233,7 +233,7 @@ class CommentRevealer:
             foundurls = []
             for match in matches:
                 # fixme: check with lowercase strings. shorturl list.txt has mixed cases
-                if any(word in match for word in shorturl_services):
+                if any(word.lower() in match.lower() for word in shorturl_services):
                     shorturl = str(match)
                     try:
                         unshortened = unshorten_url(match)
@@ -286,6 +286,8 @@ def read_shorturlservices():
     try:
         with open(shorturl_list_path) as f:
             shorturl_services = f.read().splitlines()
+            for item in shorturl_services:
+                item.lower()
     except FileNotFoundError as e:
         logger.error(e)
         logger.error("Please check services-list file or specified path in configuration file (.cfg) and restart "
