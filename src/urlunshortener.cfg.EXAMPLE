@@ -72,6 +72,6 @@ reply_footer =
 # logfile_directory_path: The directory in which the logfiles will be saved.
 
 [logger]
-eventlevel_threshold = debug
+eventlevel_threshold = INFO
 logfile_directory_path = logfiles/
 
