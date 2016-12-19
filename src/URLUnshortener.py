@@ -256,9 +256,15 @@ class CommentRevealer:
         replylinks = ''.join(replylinks)
 
         reply = self.replyhead + replylinks + self.replyfooter
-        logger.info("Replying to comment " + comment['id'] + "\nReply content: " + reply)
+        logger.info("Replying to comment " + comment['id'])
         comment = reddit.comment(comment['id'])
-        comment.reply(reply)
+        try:
+            comment.reply(reply)
+        # fixme: handle errors like"praw.exceptions.APIException: RATELIMIT: 'try again in 9 min' on field 'ratelimit'"
+        # if not allowed to post reply (i.e. ratelimit) wait some time and try again. up to N (maybe 2?) times.
+        except Exception as exception:
+            logger.error("Could not reply to comment " + comment['id'] + "\nError: " + str(exception))
+
 
 
 def read_shorturlservices():
