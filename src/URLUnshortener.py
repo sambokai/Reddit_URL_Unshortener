@@ -214,7 +214,7 @@ class CommentRevealer:
 
     def checkforreveal(self, comment):
         matches = self.thirdpass_regex.findall(comment['body'])
-        if len(matches) != 0:  # i prefer the explicit check over the pythonic 'if not matches'.deal with it ;)
+        if len(matches) > 0:  # i prefer the explicit check over the pythonic 'if not matches'.deal with it ;)
             logger.info("Found potential candidate. (Comment id: "
                         + str(comment['id']) + ") Comment details: " + str(comment))
             foundurls = []
@@ -222,7 +222,7 @@ class CommentRevealer:
                 if any(word in match for word in shorturl_services):
                     shorturl = str(match)
                     try:
-                        unshortened = str(unshorten_url(match))
+                        unshortened = unshorten_url(match)
                         foundurls.append((shorturl, unshortened))
                     except Exception as exception:
                         logging.error(str(exception))
@@ -311,15 +311,17 @@ def unshorten_url(url):
         if https_version == resolved_url:
             raise Exception("URL is not shortened. Target URL was https version of original link. URL: ", url)
 
-    else:
-        return resolved_url
+    return resolved_url
 
 
 def resolve_shorturl(url):
     url = completeurl(url)
     # desktop firefox user agent
-    headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X x.y; rv:10.0) Gecko/20100101 Firefox/10.0'}
-    # get response (header) and disallow automatic redirect-following, since we want to control that ourselves.
+    # headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X x.y; rv:10.0) Gecko/20100101 Firefox/10.0'}
+
+    # internet explorer 11 user-agent string provides highest compatibility (i.e. with t.co, google drive)
+    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.3; Trident/7.0; rv:11.0) like Gecko'}
+    #  get response (header) and disallow automatic redirect-following, since we want to control that ourselves.
     response = r_session.head(url, headers=headers, allow_redirects=False)
     # if response code is a redirection (3xx)
     if 300 <= response.status_code <= 399:
