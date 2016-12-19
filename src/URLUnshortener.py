@@ -257,13 +257,13 @@ class CommentRevealer:
 
         reply = self.replyhead + replylinks + self.replyfooter
         logger.info("Replying to comment " + comment['id'])
-        comment = reddit.comment(comment['id'])
+        comment_instance = reddit.comment(comment['id'])
         try:
-            comment.reply(reply)
+            comment_instance.reply(reply)
         # fixme: handle errors like"praw.exceptions.APIException: RATELIMIT: 'try again in 9 min' on field 'ratelimit'"
         # if not allowed to post reply (i.e. ratelimit) wait some time and try again. up to N (maybe 2?) times.
         except Exception as exception:
-            logger.error("Could not reply to comment " + comment['id'] + "\nError: " + str(exception))
+            logger.error("Could not reply to comment " + str(comment['id']) + "\nError: " + str(exception))
 
 
 
