@@ -270,6 +270,8 @@ class CommentRevealer:
             shorturl = str(link_entry[0])
             fullurl = str(link_entry[1])
             trust_rating = self.wot_trustcheck(fullurl)
+            # wait before next 'web of trust' api request.
+            time.sleep(3)
             replyline = self.replylink.format(linknumber=index + 1, shorturl=shorturl, fullurl=fullurl,
                                               trust=trust_rating[0], child=trust_rating[1])
             replylinks.append(replyline)
