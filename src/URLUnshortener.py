@@ -243,7 +243,7 @@ class CommentRevealer:
                         link_entry = (shorturl, unshortened)
                         foundurls.append(link_entry)
                     except Exception as exception:
-                        logging.exception("Error while handling " + str(unshortened))
+                        logging.exception("Error while trying to unshorten " + shorturl)
 
             if len(foundurls) > 0:
                 # reply to comment
