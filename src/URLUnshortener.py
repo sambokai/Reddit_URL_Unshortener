@@ -292,6 +292,8 @@ class CommentRevealer:
         api_link = api_link.format(domain=domain, apikey=self.wot_apikey)
         wot_response = req_session.get(api_link)
         wot_json = wot_response.json()
+        # ratings with confidence levels below this value are marked as "uncertain" in the bot's reply
+        confidence_threshold = 10
         trustworthiness = None
         child_safety = None
         # get only ONE key from json response (not elegant, but haven't found a better way of getting value of unknown
@@ -302,7 +304,15 @@ class CommentRevealer:
                 # element 0 is rating, element 1 is wot's confidence in that rating.
                 trustworthiness = (value['0'][0], value['0'][1])
                 child_safety = (value['4'][0], value['4'][1])
-                rating = (trustworthiness[0], child_safety[0])
+                if trustworthiness[1] > confidence_threshold:
+                    trust = trustworthiness[0]
+                else:
+                    trust = "(Uncertain) " + str(trustworthiness[0])
+                if child_safety[1] > confidence_threshold:
+                    child = child_safety[0]
+                else:
+                    child = "(Uncertain) " + str(child_safety[0])
+                rating = (trust, child)
                 break
         except KeyError as ex:
             logger.exception("Error key while trust-checking " + str(domain))
