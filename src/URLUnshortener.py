@@ -243,11 +243,15 @@ class CommentRevealer:
                         link_entry = (shorturl, unshortened)
                         foundurls.append(link_entry)
                     except Exception as exception:
-                        logging.error(str(exception))
+                        logging.exception("Error while handling " + str(unshortened))
 
             if len(foundurls) > 0:
                 # reply to comment
-                self.replytocomment(comment, foundurls)
+                try:
+                    self.replytocomment(comment, foundurls)
+                except Exception as ex:
+                    logging.exception("Error while trying to reply to comment. Foundurls: " + str(foundurls) +
+                                      "Comment:" + str(comment))
                 # log
                 logtext = "Found / replied to comment containing " + str(len(foundurls)) + " short-url(s):"
                 for url in foundurls:
@@ -290,13 +294,18 @@ class CommentRevealer:
         child_safety = None
         # get only ONE key from json response (not elegant, but haven't found a better way of getting value of unknown
         # key from a json object
-        for key, value in wot_json.items():
-            # tuples of trustworthiness and childsafety rating.
-            # element 0 is rating, element 1 is wot's confidence in that rating.
-            trustworthiness = (value['0'][0], value['0'][1])
-            child_safety = (value['4'][0], value['4'][1])
-            break
-        rating = (trustworthiness[0], child_safety[0])
+        try:
+            for key, value in wot_json.items():
+                # tuples of trustworthiness and childsafety rating.
+                # element 0 is rating, element 1 is wot's confidence in that rating.
+                trustworthiness = (value['0'][0], value['0'][1])
+                child_safety = (value['4'][0], value['4'][1])
+                rating = (trustworthiness[0], child_safety[0])
+                break
+        except KeyError as ex:
+            logger.exception("Error key while trust-checking " + str(domain))
+            rating = ("No data", "No data")
+
         return rating
 
 
