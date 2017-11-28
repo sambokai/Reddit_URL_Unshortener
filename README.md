@@ -1,5 +1,11 @@
 ## URL_Unshortener
 A bot that reveals full URL hidden behind shortened URLs in comments/posts on Reddit.com
+
+### Screenshot
+![Reddit URL Unshortener](ExampleScreenshot.png "Reddit URL Unshortener")
+
+
+
 ### Credits
 This application uses Open Source components. You can find the source code of their open source projects along with license information below. We acknowledge and are grateful to these developers for their contributions to open source.
 
