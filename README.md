@@ -1,4 +1,4 @@
-## Reddit_URL_Unshortener
+## Reddit URL Unshortener
 A bot that reveals full URL hidden behind shortened URLs in comments/posts on Reddit.com
 
 ### Screenshot
